@@ -205,8 +205,16 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   background-color: var(--color-bg);
   color: var(--color-text);
+  font-family: inherit;
+  height: 42px;
+  line-height: 1.5;
   cursor: pointer;
   transition: border-color 0.2s;
+}
+
+.date-input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.7;
 }
 
 .date-input:focus {

@@ -109,8 +109,8 @@ function handleOverlayClick(e: MouseEvent) {
           <datalist id="project-suggestions">
             <option v-for="p in existingProjects" :key="p" :value="p" />
           </datalist>
-          <div class="form-hint">
-            Existing: {{ existingProjects.join(", ") || "none" }}
+          <div class="form-hint" v-if="existingProjects.length > 0">
+            Existing: {{ existingProjects.join(", ") }}
           </div>
         </div>
 
@@ -128,8 +128,8 @@ function handleOverlayClick(e: MouseEvent) {
           <datalist id="context-suggestions">
             <option v-for="c in existingContexts" :key="c" :value="c" />
           </datalist>
-          <div class="form-hint">
-            Existing: {{ existingContexts.join(", ") || "none" }}
+          <div class="form-hint" v-if="existingContexts.length > 0">
+            Existing: {{ existingContexts.join(", ") }}
           </div>
         </div>
 
