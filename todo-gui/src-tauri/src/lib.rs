@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
-use todo_core::{AppTask, TaskInput, TaskService};
+use todo_core::{save_todo_path, AppTask, TaskInput, TaskService};
 
 /// Application state managed by Tauri
 pub struct AppState {
@@ -187,6 +187,9 @@ async fn select_todo_directory(
                 .map_err(|e| format!("Failed to create todo.txt: {}", e))?;
         }
 
+        // Save the selected path to config
+        save_todo_path(&todo_path).map_err(|e| format!("Failed to save todo path: {}", e))?;
+
         let mut service = state.service.lock().map_err(|e| e.to_string())?;
         *service = Some(TaskService::new(&todo_path));
 
@@ -206,6 +209,9 @@ fn init_todo_directory(state: State<AppState>, directory: String) -> Result<(), 
             .map_err(|e| format!("Failed to create todo.txt: {}", e))?;
     }
 
+    // Save the path to config
+    save_todo_path(&todo_path).map_err(|e| format!("Failed to save todo path: {}", e))?;
+
     let service = TaskService::new(&todo_path);
     let mut svc = state.service.lock().map_err(|e| e.to_string())?;
     *svc = Some(service);
@@ -215,10 +221,13 @@ fn init_todo_directory(state: State<AppState>, directory: String) -> Result<(), 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let todo_path = dirs::home_dir()
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
-        .join(".todo")
-        .join("todo.txt");
+    // Use saved path if available, otherwise use default (~/.todo/todo.txt)
+    let todo_path = todo_core::get_todo_path().unwrap_or_else(|_| {
+        dirs::home_dir()
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+            .join(".todo")
+            .join("todo.txt")
+    });
 
     if let Some(parent) = todo_path.parent() {
         std::fs::create_dir_all(parent).ok();

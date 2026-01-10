@@ -40,35 +40,39 @@ const currentFilter = ref("all");
 // Computed: Filtered Tasks
 const filteredTasks = computed(() => {
   let result = tasks.value;
-  
+
   // Filter logic
-  if (currentFilter.value === 'all') {
-      // no op
-  } else if (currentFilter.value === 'today') {
-      const today = new Date().toISOString().split('T')[0];
-      result = result.filter(t => t.due_date === today);
-  } else if (currentFilter.value === 'next7') {
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      const next7 = new Date();
-      next7.setDate(now.getDate() + 7);
-      const next7Str = next7.toISOString().split('T')[0];
-      
-      result = result.filter(t => {
-          if (!t.due_date) return false;
-          return t.due_date >= todayStr && t.due_date <= next7Str;
-      });
-  } else if (currentFilter.value.startsWith('project:')) {
-      const p = currentFilter.value.replace('project:', '');
-      result = result.filter(t => t.projects.includes(p));
-  } else if (currentFilter.value.startsWith('context:')) {
-      const c = currentFilter.value.replace('context:', '');
-      result = result.filter(t => t.contexts.includes(c));
-  } else if (currentFilter.value.startsWith('priority:')) {
-      const p = currentFilter.value.replace('priority:', '');
-      result = result.filter(t => t.priority === p);
+  if (currentFilter.value === "all") {
+    // no op
+  } else if (currentFilter.value === "today") {
+    const today = new Date().toISOString().split("T")[0];
+    result = result.filter((t) => t.due_date === today);
+  } else if (currentFilter.value === "next7") {
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const next7 = new Date();
+    next7.setDate(now.getDate() + 7);
+    const next7Str = next7.toISOString().split("T")[0];
+
+    result = result.filter((t) => {
+      if (!t.due_date) return false;
+      return t.due_date >= todayStr && t.due_date <= next7Str;
+    });
+  } else if (currentFilter.value.startsWith("project:")) {
+    const p = currentFilter.value.replace("project:", "");
+    result = result.filter((t) => t.projects.includes(p));
+  } else if (currentFilter.value.startsWith("context:")) {
+    const c = currentFilter.value.replace("context:", "");
+    result = result.filter((t) => t.contexts.includes(c));
+  } else if (currentFilter.value.startsWith("priority:")) {
+    const p = currentFilter.value.replace("priority:", "");
+    if (p === "none") {
+      result = result.filter((t) => !t.priority);
+    } else {
+      result = result.filter((t) => t.priority === p);
+    }
   }
-  
+
   return result;
 });
 
@@ -148,7 +152,7 @@ async function handleAddTask(input: CreateTaskInput) {
 }
 
 function handleFilterUpdate(newFilter: string) {
-    currentFilter.value = newFilter;
+  currentFilter.value = newFilter;
 }
 
 // Initialize
@@ -160,60 +164,59 @@ onMounted(() => {
 <template>
   <div class="app-container">
     <div class="app-layout">
-        <!-- Sidebar -->
-        <Sidebar 
-            :current-filter="currentFilter"
-            :tasks="tasks"
-            @update:filter="handleFilterUpdate"
-            @add-task="showAddModal = true"
-            @open-path="selectDirectory"
-        />
+      <!-- Sidebar -->
+      <Sidebar
+        :current-filter="currentFilter"
+        :tasks="tasks"
+        @update:filter="handleFilterUpdate"
+        @add-task="showAddModal = true"
+        @open-path="selectDirectory"
+      />
 
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="app-header">
-              <div class="header-left">
-                <h1 class="app-title">Todo.txt</h1>
-                <!-- Optional: Breadcrumb or filter name -->
-              </div>
-              <div class="header-actions">
-                 <!-- Actions moved to sidebar -->
-              </div>
-            </header>
-            
-            <div class="scrollable-content">
-                  <!-- Loading State -->
-                  <div v-if="isLoading" class="loading-state">
-                    <div class="loading-spinner"></div>
-                  </div>
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Header -->
+        <header class="app-header">
+          <div class="header-left">
+            <h1 class="app-title" :title="todoPath">Todo.txt</h1>
+          </div>
+          <div class="header-actions">
+            <!-- Actions moved to sidebar -->
+          </div>
+        </header>
 
-                  <!-- Error State -->
-                  <div v-else-if="error" class="error-state">
-                    <p class="error-message">{{ error }}</p>
-                    <button class="btn btn-secondary" @click="loadTasks">Retry</button>
-                  </div>
+        <div class="scrollable-content">
+          <!-- Loading State -->
+          <div v-if="isLoading" class="loading-state">
+            <div class="loading-spinner"></div>
+          </div>
 
-                  <!-- Empty State -->
-                  <div v-else-if="tasks.length === 0" class="empty-state">
-                    <div class="empty-icon">📝</div>
-                    <h2>No tasks</h2>
-                    <p>Add your first task.</p>
-                    <button class="btn btn-primary" @click="showAddModal = true">
-                      Add Task
-                    </button>
-                  </div>
+          <!-- Error State -->
+          <div v-else-if="error" class="error-state">
+            <p class="error-message">{{ error }}</p>
+            <button class="btn btn-secondary" @click="loadTasks">Retry</button>
+          </div>
 
-                  <!-- Task List -->
-                  <TaskList
-                    v-else
-                    :tasks="filteredTasks"
-                    @toggle-complete="handleToggleComplete"
-                    @delete="handleDeleteTask"
-                    @set-priority="handleSetPriority"
-                  />
-            </div>
-        </main>
+          <!-- Empty State -->
+          <div v-else-if="tasks.length === 0" class="empty-state">
+            <div class="empty-icon">📝</div>
+            <h2>No tasks</h2>
+            <p>Add your first task.</p>
+            <button class="btn btn-primary" @click="showAddModal = true">
+              Add Task
+            </button>
+          </div>
+
+          <!-- Task List -->
+          <TaskList
+            v-else
+            :tasks="filteredTasks"
+            @toggle-complete="handleToggleComplete"
+            @delete="handleDeleteTask"
+            @set-priority="handleSetPriority"
+          />
+        </div>
+      </main>
     </div>
 
     <!-- Add Task Modal -->
@@ -229,7 +232,9 @@ onMounted(() => {
 
 <style>
 /* Global Resets & Vars */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -242,30 +247,37 @@ onMounted(() => {
   --color-text: #334155;
   --color-text-secondary: #94a3b8;
   --color-border: #e2e8f0;
-  --color-primary: #3b82f6; 
+  --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
   --color-danger: #ef4444;
   --color-success: #22c55e;
-  
+  --color-priority-b: #f97316; /* Orange */
+  --color-priority-c: #eab308; /* Yellow */
+  --color-priority-d: #3b82f6; /* Blue */
+  --color-priority-e: #22c55e; /* Green */
+
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
-  
+
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 14px;
+  --font-size: 15px;
+
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  font-size: var(--font-size);
 }
 
 body {
-    background-color: var(--color-bg);
-    color: var(--color-text);
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }
-
 </style>
 
 <style scoped>
@@ -276,17 +288,17 @@ body {
 }
 
 .app-layout {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 .main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--color-bg);
-    min-width: 0; /* Prevent flex blowout */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg);
+  min-width: 0; /* Prevent flex blowout */
 }
 
 /* Header */
@@ -306,14 +318,14 @@ body {
 }
 
 .header-actions {
-    display: flex;
-    gap: var(--spacing-sm);
+  display: flex;
+  gap: var(--spacing-sm);
 }
 
 .scrollable-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--spacing-lg);
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-lg);
 }
 
 /* Buttons */
@@ -331,37 +343,39 @@ body {
 }
 
 .btn-icon-only {
-    padding: 0.5rem;
-    background: transparent;
-    font-size: 1.25rem;
+  padding: 0.5rem;
+  background: transparent;
+  font-size: 1.25rem;
 }
 .btn-icon-only:hover {
-    background-color: var(--color-bg-secondary);
+  background-color: var(--color-bg-secondary);
 }
 
 .btn-primary {
   background-color: var(--color-primary);
   color: white;
-  padding: 0.5rem 0.75rem; 
+  padding: 0.5rem 0.75rem;
 }
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
 }
 
 .btn-secondary {
-    background-color: transparent;
-    border: 1px solid var(--color-border);
-    color: var(--color-text);
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
 }
 
-.loading-state, .empty-state, .error-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--color-text-secondary);
-    gap: 1rem;
+.loading-state,
+.empty-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-secondary);
+  gap: 1rem;
 }
 
 /* Spinner */
@@ -375,7 +389,8 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
-
 </style>
