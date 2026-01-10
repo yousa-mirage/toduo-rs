@@ -54,27 +54,30 @@ function getDueDateClass(status: string | null): string {
   }
 }
 
-// Group tasks by priority
+// Group tasks by priority, with completed tasks at the bottom of each group
 const groupedTasks = computed(() => {
-  const groups: Record<string, Task[]> = {};
-  const noPriority: Task[] = [];
+  const groups: Record<string, { pending: Task[]; completed: Task[] }> = {};
+  const noPriority = { pending: [] as Task[], completed: [] as Task[] };
 
   props.tasks.forEach((task) => {
-    if (task.completed) return; // We handle completed separately if needed, or included in groups?
-    // Let's include completed in their priority groups for now, but usually completed tasks are separate.
-    // Actually, Sleek often shows completed tasks at the bottom or crossed out.
-    // The previous sorting logic in App.vue put completed tasks at the bottom.
-    // Let's respect the incoming order but group by priority key.
-    
-    // Wait, if we want Sleek style A, B, C headers, we need to group.
-    
     if (task.priority) {
+      // Create group if it doesn't exist
       if (!groups[task.priority]) {
-        groups[task.priority] = [];
+        groups[task.priority] = { pending: [], completed: [] };
       }
-      groups[task.priority].push(task);
+      // Add to appropriate array
+      if (task.completed) {
+        groups[task.priority].completed.push(task);
+      } else {
+        groups[task.priority].pending.push(task);
+      }
     } else {
-      noPriority.push(task);
+      // No priority
+      if (task.completed) {
+        noPriority.completed.push(task);
+      } else {
+        noPriority.pending.push(task);
+      }
     }
   });
 
@@ -83,11 +86,11 @@ const groupedTasks = computed(() => {
     .sort()
     .map((key) => ({
       key,
-      tasks: groups[key],
+      tasks: [...groups[key].pending, ...groups[key].completed],
     }));
 
-  if (noPriority.length > 0) {
-    result.push({ key: "", tasks: noPriority });
+  if (noPriority.pending.length > 0 || noPriority.completed.length > 0) {
+    result.push({ key: "", tasks: [...noPriority.pending, ...noPriority.completed] });
   }
 
   return result;
@@ -96,7 +99,7 @@ const groupedTasks = computed(() => {
 
 <template>
   <div class="task-list-container">
-    <div v-for="group in groupedTasks" :key="group.key" class="task-group">
+    <div v-for="group in groupedTasks" :key="group.key || 'no-priority'" class="task-group">
       <!-- Group Header -->
       <div v-if="group.key" class="group-header">
         <span class="group-badge" :class="getPriorityClass(group.key)">
@@ -115,10 +118,10 @@ const groupedTasks = computed(() => {
         >
           <!-- Custom Radio-style Checkbox -->
           <div 
-             class="checkbox-wrapper"
-             @click="emit('toggle-complete', task)"
+            class="checkbox-wrapper"
+            @click="emit('toggle-complete', task)"
           >
-             <div class="custom-checkbox" :class="{ checked: task.completed }"></div>
+            <div class="custom-checkbox" :class="{ checked: task.completed }"></div>
           </div>
 
           <!-- Task Body -->
@@ -144,7 +147,6 @@ const groupedTasks = computed(() => {
           <div class="task-actions">
              <button class="action-btn delete-btn" @click.stop="emit('delete', task)" title="Delete">✕</button>
              <div class="priority-changer">
-                 <!-- Simple quick priority change could go here -->
              </div>
           </div>
         </div>
@@ -217,6 +219,30 @@ const groupedTasks = computed(() => {
   opacity: 1;
 }
 
+.task-row.task-completed {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.task-row.task-completed .task-text {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+  text-decoration-color: rgba(148, 163, 184, 0.5);
+  text-decoration-thickness: 2px;
+}
+
+.task-row.task-completed .task-sub-line {
+  opacity: 0.5;
+}
+
+.task-row.task-completed .meta-badge {
+  opacity: 0.5;
+}
+
+.task-row.task-completed .text-project,
+.task-row.task-completed .text-context {
+  opacity: 0.5;
+}
+
 /* Checkbox */
 .checkbox-wrapper {
   padding: 0.2rem 0.75rem 0 0.25rem;
@@ -233,7 +259,6 @@ const groupedTasks = computed(() => {
 
 .custom-checkbox.checked {
   background-color: #3b82f6;
-  position: relative;
 }
 
 .custom-checkbox.checked::after {
@@ -267,11 +292,6 @@ const groupedTasks = computed(() => {
   color: var(--color-text);
   font-size: 1rem;
   line-height: 1.5;
-}
-
-.task-text.completed {
-  text-decoration: line-through;
-  color: var(--color-text-secondary);
 }
 
 .meta-badge {

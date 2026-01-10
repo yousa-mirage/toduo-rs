@@ -30,13 +30,16 @@ interface CreateTaskInput {
 
 // State
 const tasks = ref<Task[]>([]);
-const isLoading = ref(true);
+const isInitialLoading = ref(true);
+const isLoading = ref(false); // For background operations
 const error = ref<string | null>(null);
 const showAddModal = ref(false);
 const existingProjects = ref<string[]>([]);
 const existingContexts = ref<string[]>([]);
 const todoPath = ref<string>("");
 const currentFilter = ref("all");
+const scrollContainer = ref<HTMLElement | null>(null);
+let savedScrollPosition = 0;
 
 // Computed: Filtered Tasks
 const filteredTasks = computed(() => {
@@ -86,9 +89,9 @@ const filteredTasks = computed(() => {
 
 // Methods
 async function loadTasks() {
+  isLoading.value = true;
+  error.value = null;
   try {
-    isLoading.value = true;
-    error.value = null;
     tasks.value = await invoke<Task[]>("get_tasks");
     existingProjects.value = await invoke<string[]>("get_projects");
     existingContexts.value = await invoke<string[]>("get_contexts");
@@ -97,6 +100,24 @@ async function loadTasks() {
     error.value = String(e);
   } finally {
     isLoading.value = false;
+    isInitialLoading.value = false;
+  }
+}
+
+// Refresh tasks without showing loading state
+async function refreshTasks() {
+  try {
+    const [newTasks, newProjects, newContexts] = await Promise.all([
+      invoke<Task[]>("get_tasks"),
+      invoke<string[]>("get_projects"),
+      invoke<string[]>("get_contexts"),
+    ]);
+    tasks.value = newTasks;
+    existingProjects.value = newProjects;
+    existingContexts.value = newContexts;
+  } catch (e) {
+    // Silently fail for refresh operations
+    console.error("Failed to refresh tasks:", e);
   }
 }
 
@@ -112,40 +133,92 @@ async function selectDirectory() {
 }
 
 async function handleToggleComplete(task: Task) {
+  // Save scroll position before operation
+  if (scrollContainer.value) {
+    savedScrollPosition = scrollContainer.value.scrollTop;
+  }
+  
   try {
     if (task.completed) {
       await invoke("uncomplete_task", { id: task.id });
     } else {
       await invoke("complete_task", { id: task.id });
     }
-    await loadTasks();
+    await refreshTasks();
+    // Restore scroll position after update
+    if (scrollContainer.value) {
+      requestAnimationFrame(() => {
+        if (scrollContainer.value) {
+          scrollContainer.value.scrollTop = savedScrollPosition;
+        }
+      });
+    }
   } catch (e) {
     error.value = String(e);
   }
 }
 
 async function handleDeleteTask(task: Task) {
+  // Save scroll position before operation
+  if (scrollContainer.value) {
+    savedScrollPosition = scrollContainer.value.scrollTop;
+  }
+  
   try {
     await invoke("delete_task", { id: task.id });
-    await loadTasks();
+    await refreshTasks();
+    // Restore scroll position after update
+    if (scrollContainer.value) {
+      requestAnimationFrame(() => {
+        if (scrollContainer.value) {
+          scrollContainer.value.scrollTop = savedScrollPosition;
+        }
+      });
+    }
   } catch (e) {
     error.value = String(e);
   }
 }
 
 async function handleSetPriority(task: Task, priority: string | null) {
+  // Save scroll position before operation
+  if (scrollContainer.value) {
+    savedScrollPosition = scrollContainer.value.scrollTop;
+  }
+  
   try {
     await invoke("set_priority", { id: task.id, priority });
-    await loadTasks();
+    await refreshTasks();
+    // Restore scroll position after update
+    if (scrollContainer.value) {
+      requestAnimationFrame(() => {
+        if (scrollContainer.value) {
+          scrollContainer.value.scrollTop = savedScrollPosition;
+        }
+      });
+    }
   } catch (e) {
     error.value = String(e);
   }
 }
 
 async function handleAddTask(input: CreateTaskInput) {
+  // Save scroll position before operation
+  if (scrollContainer.value) {
+    savedScrollPosition = scrollContainer.value.scrollTop;
+  }
+  
   try {
     await invoke("add_task", { input });
-    await loadTasks();
+    await refreshTasks();
+    // Restore scroll position after update
+    if (scrollContainer.value) {
+      requestAnimationFrame(() => {
+        if (scrollContainer.value) {
+          scrollContainer.value.scrollTop = savedScrollPosition;
+        }
+      });
+    }
     showAddModal.value = false;
   } catch (e) {
     error.value = String(e);
@@ -186,9 +259,9 @@ onMounted(() => {
           </div>
         </header>
 
-        <div class="scrollable-content">
+        <div class="scrollable-content" ref="scrollContainer">
           <!-- Loading State -->
-          <div v-if="isLoading" class="loading-state">
+          <div v-if="isInitialLoading" class="loading-state">
             <div class="loading-spinner"></div>
           </div>
 
@@ -267,7 +340,7 @@ onMounted(() => {
   --radius-md: 6px;
   --radius-lg: 8px;
 
-  --font-size: 15px;
+  --font-size: 16px;
 
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
