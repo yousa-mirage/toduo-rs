@@ -90,7 +90,10 @@ const groupedTasks = computed(() => {
     }));
 
   if (noPriority.pending.length > 0 || noPriority.completed.length > 0) {
-    result.push({ key: "", tasks: [...noPriority.pending, ...noPriority.completed] });
+    result.push({
+      key: "",
+      tasks: [...noPriority.pending, ...noPriority.completed],
+    });
   }
 
   return result;
@@ -99,59 +102,105 @@ const groupedTasks = computed(() => {
 
 <template>
   <div class="task-list-container">
-    <div v-for="group in groupedTasks" :key="group.key || 'no-priority'" class="task-group">
-      <!-- Group Header -->
-      <div v-if="group.key" class="group-header">
-        <span class="group-badge" :class="getPriorityClass(group.key)">
-          {{ group.key }}
-        </span>
-        <div class="group-line"></div>
-      </div>
+    <TransitionGroup name="task-group" tag="div">
+      <div
+        v-for="group in groupedTasks"
+        :key="group.key || 'no-priority'"
+        class="task-group"
+      >
+        <!-- Group Header -->
+        <div v-if="group.key" class="group-header">
+          <span class="group-badge" :class="getPriorityClass(group.key)">
+            {{ group.key }}
+          </span>
+          <div class="group-line"></div>
+        </div>
 
-      <!-- Group Content -->
-      <div class="group-items">
-        <div
-          v-for="task in group.tasks"
-          :key="task.id"
-          class="task-row"
-          :class="{ 'task-completed': task.completed }"
-        >
-          <!-- Custom Radio-style Checkbox -->
-          <div 
-            class="checkbox-wrapper"
-            @click="emit('toggle-complete', task)"
-          >
-            <div class="custom-checkbox" :class="{ checked: task.completed }"></div>
-          </div>
+        <!-- Group Content -->
+        <div class="group-items">
+          <TransitionGroup name="task-row" tag="div">
+            <div
+              v-for="task in group.tasks"
+              :key="task.id"
+              class="task-row"
+              :class="{ 'task-completed': task.completed }"
+            >
+              <!-- Custom Radio-style Checkbox -->
+              <div
+                class="checkbox-wrapper"
+                @click="emit('toggle-complete', task)"
+              >
+                <div
+                  class="custom-checkbox"
+                  :class="{ checked: task.completed }"
+                ></div>
+              </div>
 
-          <!-- Task Body -->
-          <div class="task-body">
-            <div class="task-main-line">
-              <span class="task-text" :class="{ completed: task.completed }">
-                {{ task.subject }}
-              </span>
-              
-              <!-- Inline Metadata Badges -->
-              <span v-if="task.due_status !== 'None'" class="meta-badge meta-due" :class="getDueDateClass(task.due_status)">
-                due: {{ task.due_date }}
-              </span>
+              <!-- Task Body -->
+              <div class="task-body">
+                <div class="task-main-line">
+                  <span
+                    class="task-text"
+                    :class="{ completed: task.completed }"
+                  >
+                    {{ task.subject }}
+                  </span>
+
+                  <!-- Inline Metadata Badges -->
+                  <span
+                    v-if="task.due_status !== 'None'"
+                    class="meta-badge meta-due"
+                    :class="getDueDateClass(task.due_status)"
+                  >
+                    due: {{ task.due_date }}
+                  </span>
+                </div>
+
+                <div
+                  class="task-sub-line"
+                  v-if="task.projects.length || task.contexts.length"
+                >
+                  <span v-for="p in task.projects" :key="p" class="text-project"
+                    >+{{ p }}</span
+                  >
+                  <span v-for="c in task.contexts" :key="c" class="text-context"
+                    >@{{ c }}</span
+                  >
+                </div>
+              </div>
+
+              <!-- Actions (Hover only) -->
+              <div class="task-actions">
+                <button
+                  class="action-btn delete-btn"
+                  @click.stop="emit('delete', task)"
+                  title="Delete"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    ></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
+              </div>
             </div>
-
-            <div class="task-sub-line" v-if="task.projects.length || task.contexts.length">
-                <span v-for="p in task.projects" :key="p" class="text-project">+{{p}}</span>
-                <span v-for="c in task.contexts" :key="c" class="text-context">@{{c}}</span>
-            </div>
-          </div>
-
-          <!-- Actions (Hover only) -->
-          <div class="task-actions">
-             <button class="action-btn delete-btn" @click.stop="emit('delete', task)" title="Delete">✕</button>
-             <div class="priority-changer">
-             </div>
-          </div>
+          </TransitionGroup>
         </div>
       </div>
-    </div>
+    </TransitionGroup>
   </div>
 </template>
 
@@ -170,6 +219,7 @@ const groupedTasks = computed(() => {
 .group-header {
   display: flex;
   align-items: center;
+  margin-top: 1rem;
   margin-bottom: 0.5rem;
 }
 
@@ -197,19 +247,29 @@ const groupedTasks = computed(() => {
 }
 
 /* Priority Colors */
-.priority-a { background-color: #ef4444; }
-.priority-b { background-color: #f97316; }
-.priority-c { background-color: #eab308; }
-.priority-other { background-color: #94a3b8; }
+.priority-a {
+  background-color: #ef4444;
+}
+.priority-b {
+  background-color: #f97316;
+}
+.priority-c {
+  background-color: #eab308;
+}
+.priority-other {
+  background-color: #94a3b8;
+}
 
 /* Item Row */
 .task-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   padding: 0.5rem var(--spacing-lg);
   margin: 0 calc(-1 * var(--spacing-lg));
   border-radius: 4px;
   transition: background-color 0.1s;
+  min-height: 48px;
+  will-change: transform, opacity;
 }
 
 .task-row:hover {
@@ -225,6 +285,9 @@ const groupedTasks = computed(() => {
   background-color: rgba(0, 0, 0, 0.02);
   padding: 0.5rem var(--spacing-lg);
   margin: 0 calc(-1 * var(--spacing-lg));
+  transition:
+    background-color 0.3s ease,
+    opacity 0.3s ease;
 }
 
 .task-row.task-completed .task-text {
@@ -232,19 +295,52 @@ const groupedTasks = computed(() => {
   text-decoration: line-through;
   text-decoration-color: rgba(148, 163, 184, 0.5);
   text-decoration-thickness: 2px;
+  transition:
+    color 0.3s ease,
+    text-decoration-color 0.3s ease;
 }
 
 .task-row.task-completed .task-sub-line {
   opacity: 0.5;
+  transition: opacity 0.3s ease;
 }
 
 .task-row.task-completed .meta-badge {
   opacity: 0.5;
+  transition: opacity 0.3s ease;
 }
 
 .task-row.task-completed .text-project,
 .task-row.task-completed .text-context {
   opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+/* TransitionGroup Animations */
+.task-row-move {
+  transition:
+    transform 0.35s ease,
+    opacity 0.35s ease;
+}
+
+.task-row-enter-active,
+.task-row-leave-active {
+  transition: all 0.3s ease;
+}
+
+.task-row-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.task-row-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.task-row-leave-active {
+  position: absolute;
+  width: 100%;
 }
 
 /* Checkbox */
@@ -266,7 +362,7 @@ const groupedTasks = computed(() => {
 }
 
 .custom-checkbox.checked::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 4px;
   left: 3px;
@@ -286,10 +382,10 @@ const groupedTasks = computed(() => {
 }
 
 .task-main-line {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .task-text {
@@ -299,11 +395,11 @@ const groupedTasks = computed(() => {
 }
 
 .meta-badge {
-    font-size: 0.75rem;
-    padding: 2px 6px;
-    border-radius: 10px;
-    background-color: #e2e8f0;
-    color: #475569;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background-color: #e2e8f0;
+  color: #475569;
 }
 
 .meta-due {
@@ -324,40 +420,47 @@ const groupedTasks = computed(() => {
 }
 
 .task-sub-line {
-    font-size: 0.85rem;
-    margin-top: 2px;
-    color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  margin-top: 2px;
+  color: var(--color-text-secondary);
 }
 
 .text-project {
-    color: #e0d04c; 
-    font-weight: bold;
-    margin-right: 0.5rem;
+  color: #e0d04c;
+  font-weight: bold;
+  margin-right: 0.5rem;
 }
 .text-context {
-    color: #3b82f6;
-    margin-right: 0.5rem;
+  color: #3b82f6;
+  margin-right: 0.5rem;
 }
 
 /* Actions */
 .task-actions {
-    opacity: 0;
-    display: flex;
-    align-items: center;
-    padding-left: 0.5rem;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 0.5rem;
 }
 
 .action-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-    color: #94a3b8;
-    padding: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.action-btn:hover {
-    color: #ef4444;
+.action-btn svg {
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+  transition: color 0.2s;
 }
 
+.action-btn:hover svg {
+  color: #ef4444;
+}
 </style>

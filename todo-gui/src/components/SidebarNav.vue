@@ -1,9 +1,24 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+// Types
+interface Task {
+  id: number;
+  subject: string;
+  priority: string | null;
+  completed: boolean;
+  create_date: string | null;
+  finish_date: string | null;
+  due_date: string | null;
+  due_status: "Today" | "Soon" | "Overdue" | "Later" | "None";
+  projects: string[];
+  contexts: string[];
+  raw_content: string;
+}
+
 const props = defineProps<{
   currentFilter: string;
-  tasks: any[];
+  tasks: Task[];
 }>();
 
 const emit = defineEmits<{
@@ -157,7 +172,9 @@ const icons = {
           <span class="nav-icon" v-html="icons.today"></span>
           <span class="nav-details">
             <span class="nav-label">Today</span>
-            <span v-if="counts.today" class="nav-count">{{ counts.today }}</span>
+            <span v-if="counts.today" class="nav-count">{{
+              counts.today
+            }}</span>
           </span>
         </button>
         <button
@@ -169,13 +186,18 @@ const icons = {
           <span class="nav-icon" v-html="icons.calendar"></span>
           <span class="nav-details">
             <span class="nav-label">Next 7 Days</span>
-            <span v-if="counts.next7" class="nav-count">{{ counts.next7 }}</span>
+            <span v-if="counts.next7" class="nav-count">{{
+              counts.next7
+            }}</span>
           </span>
         </button>
       </div>
 
       <!-- Priorities -->
-      <div class="nav-group" v-if="existingPriorities.size > 0 || hasNoPriorityTasks">
+      <div
+        class="nav-group"
+        v-if="existingPriorities.size > 0 || hasNoPriorityTasks"
+      >
         <div class="nav-header" v-if="!isCollapsed">Priorities</div>
 
         <button
@@ -187,7 +209,9 @@ const icons = {
           @click="emit('update:filter', 'priority:' + priority.key)"
           :title="priority.label"
         >
-          <span class="dot-priority" :class="priority.colorClass">{{ priority.key }}</span>
+          <span class="dot-priority" :class="priority.colorClass">{{
+            priority.key
+          }}</span>
           <span class="nav-details">
             <span class="nav-label">{{ priority.label }}</span>
           </span>
@@ -275,7 +299,7 @@ const icons = {
   border-radius: 8px; /* Slightly rounded */
   height: 44px;
   width: 100%;
-  
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -284,10 +308,13 @@ const icons = {
   font-weight: 600;
   font-size: 1rem;
   box-shadow: 0 2px 5px rgba(59, 130, 246, 0.3);
-  
+
   /* Transition these properties */
-  transition: width 0.3s, border-radius 0.3s, background-color 0.2s;
-  
+  transition:
+    width 0.3s,
+    border-radius 0.3s,
+    background-color 0.2s;
+
   overflow: hidden;
   /* Prevent text wrapping during shrink */
   white-space: nowrap;
@@ -355,15 +382,15 @@ const icons = {
   cursor: pointer;
   color: var(--color-text);
   font-size: 0.95rem;
-  
+
   text-align: left;
   height: 40px;
-  
+
   /* Unified padding/margins for transition */
   padding: 0 12px; /* Pad inside */
   margin: 0;
   margin-bottom: 2px;
-  
+
   transition: background-color 0.1s;
   overflow: hidden;
   white-space: nowrap;
@@ -383,7 +410,7 @@ const icons = {
   /* collapsed state */
   padding: 0; /* Clear padding? Or keep centered? */
   justify-content: center;
-  
+
   /* Force a centered width */
   width: 44px; /* Same as add button basically */
   margin: 0 auto 2px auto;
@@ -408,19 +435,19 @@ const icons = {
   height: 24px;
 }
 .nav-icon :deep(svg) {
-    width: 20px;
-    height: 20px;
+  width: 20px;
+  height: 20px;
 }
 .icon-plus {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 .icon-plus :deep(svg) {
-    width: 20px;
-    height: 20px;
+  width: 20px;
+  height: 20px;
 }
 
 .nav-details {
@@ -430,7 +457,9 @@ const icons = {
   overflow: hidden;
   margin-left: 10px;
   opacity: 1;
-  transition: opacity 0.2s, max-width 0.2s;
+  transition:
+    opacity 0.2s,
+    max-width 0.2s;
   max-width: 200px; /* Arbitrary large enough number */
 }
 
@@ -501,7 +530,7 @@ const icons = {
 
 .sidebar-collapsed .sidebar-footer {
   /* Remove horizontal padding to let buttons center themselves via margin:auto */
-  padding: 16px 0; 
+  padding: 16px 0;
   align-items: center; /* Ensure flex centering */
 }
 

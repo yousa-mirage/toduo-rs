@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import TaskList from "./components/TaskList.vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
-import Sidebar from "./components/Sidebar.vue";
+import SidebarNav from "./components/SidebarNav.vue";
 
 // Types
 interface Task {
@@ -137,7 +137,7 @@ async function handleToggleComplete(task: Task) {
   if (scrollContainer.value) {
     savedScrollPosition = scrollContainer.value.scrollTop;
   }
-  
+
   try {
     if (task.completed) {
       await invoke("uncomplete_task", { id: task.id });
@@ -163,7 +163,7 @@ async function handleDeleteTask(task: Task) {
   if (scrollContainer.value) {
     savedScrollPosition = scrollContainer.value.scrollTop;
   }
-  
+
   try {
     await invoke("delete_task", { id: task.id });
     await refreshTasks();
@@ -185,7 +185,7 @@ async function handleSetPriority(task: Task, priority: string | null) {
   if (scrollContainer.value) {
     savedScrollPosition = scrollContainer.value.scrollTop;
   }
-  
+
   try {
     await invoke("set_priority", { id: task.id, priority });
     await refreshTasks();
@@ -207,7 +207,7 @@ async function handleAddTask(input: CreateTaskInput) {
   if (scrollContainer.value) {
     savedScrollPosition = scrollContainer.value.scrollTop;
   }
-  
+
   try {
     await invoke("add_task", { input });
     await refreshTasks();
@@ -239,7 +239,7 @@ onMounted(() => {
   <div class="app-container">
     <div class="app-layout">
       <!-- Sidebar -->
-      <Sidebar
+      <SidebarNav
         :current-filter="currentFilter"
         :tasks="tasks"
         @update:filter="handleFilterUpdate"

@@ -16,7 +16,7 @@ const emit = defineEmits<{
       projects: string[];
       contexts: string[];
       due_date: string | null;
-    }
+    },
   ): void;
   (e: "close"): void;
 }>();
