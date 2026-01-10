@@ -106,7 +106,7 @@ function toggleSidebar() {
 
 // Icons (Simple SVGs)
 const icons = {
-  plus: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+  plus: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
   inbox: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`,
   today: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
   calendar: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><text x="7" y="17" font-size="6" font-family="sans-serif">7</text></svg>`,
@@ -128,7 +128,9 @@ const icons = {
     <div class="sidebar-top">
       <button class="btn-add" @click="emit('add-task')" title="Add Task">
         <span class="icon-plus" v-html="icons.plus"></span>
-        <span v-if="!isCollapsed" class="label">Add Task</span>
+        <span class="nav-details">
+          <span class="label">Add Task</span>
+        </span>
       </button>
     </div>
 
@@ -143,8 +145,10 @@ const icons = {
           title="Inbox"
         >
           <span class="nav-icon" v-html="icons.inbox"></span>
-          <span v-if="!isCollapsed" class="nav-label">Inbox</span>
-          <span v-if="!isCollapsed" class="nav-count">{{ counts.all }}</span>
+          <span class="nav-details">
+            <span class="nav-label">Inbox</span>
+            <span class="nav-count">{{ counts.all }}</span>
+          </span>
         </button>
         <button
           class="nav-item"
@@ -153,10 +157,10 @@ const icons = {
           title="Today"
         >
           <span class="nav-icon" v-html="icons.today"></span>
-          <span v-if="!isCollapsed" class="nav-label">Today</span>
-          <span v-if="!isCollapsed && counts.today" class="nav-count">{{
-            counts.today
-          }}</span>
+          <span class="nav-details">
+            <span class="nav-label">Today</span>
+            <span v-if="counts.today" class="nav-count">{{ counts.today }}</span>
+          </span>
         </button>
         <button
           class="nav-item"
@@ -165,10 +169,10 @@ const icons = {
           title="Next 7 Days"
         >
           <span class="nav-icon" v-html="icons.calendar"></span>
-          <span v-if="!isCollapsed" class="nav-label">Next 7 Days</span>
-          <span v-if="!isCollapsed && counts.next7" class="nav-count">{{
-            counts.next7
-          }}</span>
+          <span class="nav-details">
+            <span class="nav-label">Next 7 Days</span>
+            <span v-if="counts.next7" class="nav-count">{{ counts.next7 }}</span>
+          </span>
         </button>
       </div>
 
@@ -186,7 +190,9 @@ const icons = {
           :title="priority.label"
         >
           <span class="dot-priority" :class="priority.colorClass">{{ priority.key }}</span>
-          <span v-if="!isCollapsed" class="nav-label">{{ priority.label }}</span>
+          <span class="nav-details">
+            <span class="nav-label">{{ priority.label }}</span>
+          </span>
         </button>
 
         <!-- No priority (gray dash) -->
@@ -198,7 +204,9 @@ const icons = {
           title="No Priority"
         >
           <span class="dot-priority dot-none">-</span>
-          <span v-if="!isCollapsed" class="nav-label">No Priority</span>
+          <span class="nav-details">
+            <span class="nav-label">No Priority</span>
+          </span>
         </button>
       </div>
     </nav>
@@ -211,14 +219,18 @@ const icons = {
         title="Open Folder"
       >
         <span class="nav-icon" v-html="icons.folder"></span>
-        <span v-if="!isCollapsed" class="nav-label">Open Path</span>
+        <span class="nav-details">
+          <span class="nav-label">Open Path</span>
+        </span>
       </button>
       <button class="btn-toggle" @click="toggleSidebar" title="Toggle Sidebar">
         <span
           class="nav-icon"
           v-html="isCollapsed ? icons.chevronRight : icons.chevronLeft"
         ></span>
-        <span v-if="!isCollapsed" class="nav-label">Toggle Sidebar</span>
+        <span class="nav-details">
+          <span class="nav-label">Toggle Sidebar</span>
+        </span>
       </button>
     </div>
 
@@ -240,6 +252,7 @@ const icons = {
   flex-shrink: 0;
   height: 100vh;
   z-index: 10;
+  overflow-x: hidden;
 }
 
 .is-resizing {
@@ -249,6 +262,12 @@ const icons = {
 /* --- Top Section (Add Button) --- */
 .sidebar-top {
   padding: 20px 16px;
+  /* Use transition for smooth padding change if needed, 
+     but center-align vs left-align is tricky. 
+     Better to keep padding consistent or use flex centering. */
+  transition: padding 0.3s;
+  display: flex;
+  justify-content: center; /* Generally center, let width control it */
 }
 
 .btn-add {
@@ -258,16 +277,24 @@ const icons = {
   border-radius: 8px; /* Slightly rounded */
   height: 44px;
   width: 100%;
+  
   display: flex;
   align-items: center;
+  /* Justify center to keep icon in middle when collapsed */
   justify-content: center;
+  
   gap: 8px;
   cursor: pointer;
   font-weight: 600;
   font-size: 1rem;
   box-shadow: 0 2px 5px rgba(59, 130, 246, 0.3);
-  transition: all 0.2s;
+  
+  /* Transition these properties */
+  transition: width 0.3s, border-radius 0.3s, background-color 0.2s;
+  
   overflow: hidden;
+  /* Prevent text wrapping during shrink */
+  white-space: nowrap;
 }
 
 .btn-add:hover {
@@ -277,22 +304,24 @@ const icons = {
 }
 
 .sidebar-collapsed .btn-add {
+  /* Match the width of the collapsed sidebar minus some margin? 
+     Collapsed width is 70px. Button 44px is good. */
   width: 44px;
-  height: 44px;
+  /* height is already 44 */
   border-radius: 50%; /* Circle when collapsed */
   padding: 0;
 }
 
 .sidebar-collapsed .sidebar-top {
-  padding: 20px 0; /* Center align horizontally */
-  display: flex;
-  justify-content: center;
+  /* padding: 20px 0;  <-- Remove this special padding, let flex center handle it */
+  padding: 20px 0;
 }
 
 /* --- Navigation --- */
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0 10px;
 }
 
@@ -313,18 +342,26 @@ const icons = {
 .nav-item {
   display: flex;
   align-items: center;
+  /* Instead of width 100%, use flex-grow or predictable sizing */
   width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 2px;
   border: none;
   background: transparent;
   border-radius: 8px;
   cursor: pointer;
   color: var(--color-text);
   font-size: 0.95rem;
-  transition: background-color 0.1s;
+  
   text-align: left;
   height: 40px;
+  
+  /* Unified padding/margins for transition */
+  padding: 0 12px; /* Pad inside */
+  margin: 0;
+  margin-bottom: 2px;
+  
+  transition: background-color 0.1s;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .nav-item:hover {
@@ -338,22 +375,69 @@ const icons = {
 }
 
 .sidebar-collapsed .nav-item {
+  /* collapsed state */
+  padding: 0; /* Clear padding? Or keep centered? */
   justify-content: center;
-  padding: 0;
-  width: 40px;
-  margin: 0 auto 4px auto;
+  
+  /* Force a centered width */
+  width: 44px; /* Same as add button basically */
+  margin: 0 auto 2px auto;
+}
+
+.nav-text-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+  /* Check if we need to animate opacity/width here or rely on v-if removal speed? */
+  /* If relying on v-if, it snaps. */
 }
 
 .nav-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* transition: margin 0.2s; */
+  /* Make icon size strict so it doesn't squish */
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
+}
+.nav-icon :deep(svg) {
+    width: 20px;
+    height: 20px;
+}
+.icon-plus {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+.icon-plus :deep(svg) {
+    width: 20px;
+    height: 20px;
+}
+
+.nav-details {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  overflow: hidden;
+  margin-left: 10px;
+  opacity: 1;
+  transition: opacity 0.2s, max-width 0.2s;
+  max-width: 200px; /* Arbitrary large enough number */
+}
+
+/* Hide text when collapsed */
+.sidebar-collapsed .nav-details {
+  opacity: 0;
+  max-width: 0;
+  margin-left: 0;
 }
 
 .nav-label {
   flex: 1;
-  margin-left: 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -365,6 +449,7 @@ const icons = {
   background-color: rgba(0, 0, 0, 0.05);
   padding: 2px 8px;
   border-radius: 10px;
+  margin-left: 8px;
 }
 
 /* Priority Dots */
@@ -409,6 +494,12 @@ const icons = {
   gap: 4px;
 }
 
+.sidebar-collapsed .sidebar-footer {
+  /* Remove horizontal padding to let buttons center themselves via margin:auto */
+  padding: 16px 0; 
+  align-items: center; /* Ensure flex centering */
+}
+
 .btn-toggle {
   display: flex;
   align-items: center;
@@ -429,7 +520,7 @@ const icons = {
 .sidebar-collapsed .btn-toggle {
   justify-content: center;
   padding: 0;
-  width: 40px;
+  width: 44px;
   margin: 0 auto;
 }
 
