@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
-use todo_core::{get_todo_path as get_config_todo_path, save_todo_path, AppTask, TaskInput, TaskService};
+use todo_core::{AppTask, TaskInput, TaskService};
 
 /// Application state managed by Tauri
 pub struct AppState {
@@ -150,16 +150,13 @@ fn get_contexts(state: State<AppState>) -> Result<Vec<String>, String> {
 
 /// Get current todo file path
 #[tauri::command]
-fn get_current_todo_path(state: State<AppState>) -> String {
+fn get_todo_path(state: State<AppState>) -> String {
     state.todo_path.to_string_lossy().to_string()
 }
 
 /// Select todo file directory
 #[tauri::command]
-async fn select_todo_directory(
-    state: State<'_, AppState>,
-    app: tauri::Window,
-) -> Result<bool, String> {
+async fn select_todo_directory(state: State<'_, AppState>, app: tauri::Window) -> Result<bool, String> {
     use std::sync::mpsc;
 
     let (tx, rx) = mpsc::channel();
@@ -187,9 +184,6 @@ async fn select_todo_directory(
                 .map_err(|e| format!("Failed to create todo.txt: {}", e))?;
         }
 
-        // Save the path for future use
-        save_todo_path(&todo_path).map_err(|e| e.to_string())?;
-
         let mut service = state.service.lock().map_err(|e| e.to_string())?;
         *service = Some(TaskService::new(&todo_path));
 
@@ -205,12 +199,8 @@ fn init_todo_directory(state: State<AppState>, directory: String) -> Result<(), 
     let todo_path = PathBuf::from(directory).join("todo.txt");
 
     if !todo_path.exists() {
-        std::fs::File::create(&todo_path)
-            .map_err(|e| format!("Failed to create todo.txt: {}", e))?;
+        std::fs::File::create(&todo_path).map_err(|e| format!("Failed to create todo.txt: {}", e))?;
     }
-
-    // Save the path for future use
-    save_todo_path(&todo_path).map_err(|e| e.to_string())?;
 
     let service = TaskService::new(&todo_path);
     let mut svc = state.service.lock().map_err(|e| e.to_string())?;
@@ -221,16 +211,10 @@ fn init_todo_directory(state: State<AppState>, directory: String) -> Result<(), 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let todo_path = match get_config_todo_path() {
-        Ok(path) => path,
-        Err(e) => {
-            eprintln!("Failed to get todo path: {}, using default", e);
-            dirs::home_dir()
-                .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
-                .join(".todo")
-                .join("todo.txt")
-        }
-    };
+    let todo_path = dirs::home_dir()
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+        .join(".todo")
+        .join("todo.txt");
 
     if let Some(parent) = todo_path.parent() {
         std::fs::create_dir_all(parent).ok();
@@ -254,7 +238,7 @@ pub fn run() {
             delete_task,
             get_projects,
             get_contexts,
-            get_current_todo_path,
+            get_todo_path,
             select_todo_directory,
             init_todo_directory,
         ])

@@ -16,6 +16,7 @@ interface Task {
   due_date: string | null;
   projects: string[];
   contexts: string[];
+  raw_content: string;
 }
 
 interface CreateTaskInput {
@@ -61,6 +62,13 @@ const filteredTasks = computed(() => {
   return result;
 });
 
+// Stats
+const stats = computed(() => ({
+  total: tasks.value.length,
+  completed: tasks.value.filter((t) => t.completed).length,
+  pending: tasks.value.filter((t) => !t.completed).length,
+}));
+
 // Methods
 async function loadTasks() {
   try {
@@ -69,7 +77,7 @@ async function loadTasks() {
     tasks.value = await invoke<Task[]>("get_tasks");
     existingProjects.value = await invoke<string[]>("get_projects");
     existingContexts.value = await invoke<string[]>("get_contexts");
-    todoPath.value = await invoke<string>("get_current_todo_path");
+    todoPath.value = await invoke<string>("get_todo_path");
   } catch (e) {
     error.value = String(e);
   } finally {
@@ -163,10 +171,9 @@ onMounted(() => {
                  <button class="btn btn-icon-only" @click="selectDirectory" title="Change directory">
                     📁
                  </button>
-                  <button class="btn btn-primary" @click="showAddModal = true">
-                    <span style="font-size: 1.25rem; font-weight: 500; line-height: 1;">+</span>
-                    <span style="font-size: 1rem; font-weight: 500; margin-left: 0.25rem;">添加任务</span>
-                  </button>
+                 <button class="btn btn-primary" @click="showAddModal = true">
+                  <span class="btn-icon">+</span>
+                </button>
               </div>
             </header>
             
@@ -188,8 +195,7 @@ onMounted(() => {
                     <h2>No tasks</h2>
                     <p>Add your first task.</p>
                     <button class="btn btn-primary" @click="showAddModal = true">
-                      <span style="font-size: 1.25rem; font-weight: 500; line-height: 1;">+</span>
-                      <span style="font-size: 1rem; font-weight: 500; margin-left: 0.25rem;">添加任务</span>
+                      Add Task
                     </button>
                   </div>
 
@@ -247,7 +253,7 @@ onMounted(() => {
   --radius-lg: 8px;
 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 body {
@@ -331,11 +337,7 @@ body {
 .btn-primary {
   background-color: var(--color-primary);
   color: white;
-  padding: 0.5rem 0.75rem;
-  font-size: 1.25rem;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
+  padding: 0.5rem 0.75rem; 
 }
 .btn-primary:hover {
   background-color: var(--color-primary-hover);

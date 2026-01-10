@@ -27,16 +27,13 @@ impl TaskService {
         let todo_path = todo_path.as_ref().to_path_buf();
         let done_path = todo_path.with_file_name("done.txt");
 
-        Self {
-            todo_path,
-            done_path,
-        }
+        Self { todo_path, done_path }
     }
 
     /// Create a TaskService using the default config directory
     pub fn with_default_path() -> Result<Self> {
-        let home_dir = dirs::home_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
+        let home_dir =
+            dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
         let todo_dir = home_dir.join(".todo");
 
         // Ensure the directory exists

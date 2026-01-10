@@ -60,6 +60,9 @@ cargo test -p todo-core lib::<module_name>
 
 ## Code Style
 
+**In each session, when you have finished making your changes, you must run `cargo fmt` and `cargo clippy --all`**
+Make sure the code format is consistent and there are no errors or warnings in the code. If there are any, continue to fix them.
+
 ### Rust Conventions
 
 **Imports**: Use `use` statements with grouping. Prefer absolute paths for workspace dependencies.
