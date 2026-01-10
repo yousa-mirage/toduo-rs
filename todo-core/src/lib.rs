@@ -13,7 +13,7 @@ mod service;
 
 pub use config::{get_todo_path, save_todo_path};
 pub use error::TodoError;
-pub use model::{AppTask, TaskInput};
+pub use model::{AppTask, DueStatus, TaskInput};
 pub use service::TaskService;
 
 // Re-export commonly used types from todo-txt

@@ -14,6 +14,7 @@ interface Task {
   create_date: string | null;
   finish_date: string | null;
   due_date: string | null;
+  due_status: "Today" | "Soon" | "Overdue" | "Later" | "None";
   projects: string[];
   contexts: string[];
   raw_content: string;
@@ -312,9 +313,10 @@ body {
 }
 
 .app-title {
-  font-size: 1.25rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--color-text);
+  cursor: default;
 }
 
 .header-actions {

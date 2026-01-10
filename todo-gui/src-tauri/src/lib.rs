@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
-use todo_core::{save_todo_path, AppTask, TaskInput, TaskService};
+use todo_core::{save_todo_path, AppTask, DueStatus, TaskInput, TaskService};
 
 /// Application state managed by Tauri
 pub struct AppState {
@@ -25,6 +25,7 @@ pub struct Task {
     pub create_date: Option<String>,
     pub finish_date: Option<String>,
     pub due_date: Option<String>,
+    pub due_status: DueStatus,
     pub projects: Vec<String>,
     pub contexts: Vec<String>,
     pub raw_content: String,
@@ -40,6 +41,7 @@ impl From<AppTask> for Task {
             create_date: task.create_date,
             finish_date: task.finish_date,
             due_date: task.due_date,
+            due_status: task.due_status,
             projects: task.projects,
             contexts: task.contexts,
             raw_content: task.raw_content,

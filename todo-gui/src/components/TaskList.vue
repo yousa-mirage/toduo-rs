@@ -10,6 +10,7 @@ interface Task {
   create_date: string | null;
   finish_date: string | null;
   due_date: string | null;
+  due_status: "Today" | "Soon" | "Overdue" | "Later" | "None";
   projects: string[];
   contexts: string[];
   raw_content: string;
@@ -36,6 +37,20 @@ function getPriorityClass(priority: string | null): string {
       return "priority-c";
     default:
       return "priority-other";
+  }
+}
+
+function getDueDateClass(status: string | null): string {
+  if (!status) return "";
+  switch (status) {
+    case "Today":
+      return "due-today";
+    case "Soon":
+      return "due-soon";
+    case "Overdue":
+      return "due-overdue";
+    default:
+      return "";
   }
 }
 
@@ -114,7 +129,7 @@ const groupedTasks = computed(() => {
               </span>
               
               <!-- Inline Metadata Badges -->
-              <span v-if="task.due_date" class="meta-badge meta-due">
+              <span v-if="task.due_status !== 'None'" class="meta-badge meta-due" :class="getDueDateClass(task.due_status)">
                 due: {{ task.due_date }}
               </span>
             </div>
@@ -268,8 +283,20 @@ const groupedTasks = computed(() => {
 }
 
 .meta-due {
-    background-color: #94a3b8;
-    color: white;
+  background-color: #94a3b8;
+  color: white;
+}
+
+.due-today {
+  background-color: #ef4444 !important;
+}
+
+.due-soon {
+  background-color: #f97316 !important;
+}
+
+.due-overdue {
+  background-color: #78350f !important;
 }
 
 .task-sub-line {

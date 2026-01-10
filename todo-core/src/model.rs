@@ -5,6 +5,53 @@ use serde::{Deserialize, Serialize};
 use todo_txt::task::Simple as RawTask;
 use todo_txt::Priority;
 
+/// Due date status for UI display
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum DueStatus {
+    /// Due date is today - red
+    Today,
+    /// Due date is within 7 days - orange
+    Soon,
+    /// Due date is in the past - brown
+    Overdue,
+    /// Due date is more than 7 days away - gray
+    Later,
+    /// No due date set
+    None,
+}
+
+impl DueStatus {
+    /// Calculate DueStatus from a due date string (YYYY-MM-DD format)
+    pub fn from_due_date(due_date: Option<&str>) -> Self {
+        let due_date = match due_date {
+            Some(d) => d,
+            None => return Self::None,
+        };
+
+        // Parse the due date
+        let due = match NaiveDate::parse_from_str(due_date, "%Y-%m-%d") {
+            Ok(d) => d,
+            Err(_) => return Self::None,
+        };
+
+        // Get today's date (local time)
+        let today = chrono::Local::now().date_naive();
+
+        // Calculate dates for comparison
+        let next_7_days = today + chrono::Duration::days(7);
+
+        if due < today {
+            Self::Overdue
+        } else if due == today {
+            Self::Today
+        } else if due <= next_7_days {
+            Self::Soon
+        } else {
+            Self::Later
+        }
+    }
+}
+
 /// Application-level task wrapper
 ///
 /// Wraps the raw `todo-txt` Task with additional metadata needed for UI operations.
@@ -31,6 +78,8 @@ pub struct AppTask {
     pub finish_date: Option<String>,
     /// Due date from due:YYYY-MM-DD tag
     pub due_date: Option<String>,
+    /// Calculated due status for UI display
+    pub due_status: DueStatus,
     /// Project tags (+project)
     pub projects: Vec<String>,
     /// Context tags (@context)
@@ -50,6 +99,7 @@ impl AppTask {
         let create_date = parsed.create_date.map(|d| d.format("%Y-%m-%d").to_string());
         let finish_date = parsed.finish_date.map(|d| d.format("%Y-%m-%d").to_string());
         let due_date = parsed.due_date.map(|d| d.format("%Y-%m-%d").to_string());
+        let due_status = DueStatus::from_due_date(due_date.as_deref());
         let projects = parsed.projects.clone();
         let contexts = parsed.contexts.clone();
 
@@ -63,6 +113,7 @@ impl AppTask {
             create_date,
             finish_date,
             due_date,
+            due_status,
             projects,
             contexts,
         }
