@@ -103,11 +103,18 @@ impl AppTask {
         let projects = parsed.projects.clone();
         let contexts = parsed.contexts.clone();
 
+        let clean_subject = subject
+            .replace(['\r', '\n'], "")
+            .split_whitespace()
+            .filter(|word| !word.starts_with('@') && !word.starts_with('+'))
+            .collect::<Vec<_>>()
+            .join(" ");
+
         Self {
             id,
             raw_content,
             parsed,
-            subject,
+            subject: clean_subject,
             priority,
             completed,
             create_date,
@@ -243,6 +250,48 @@ mod tests {
     }
 
     #[test]
+    fn test_due_status() {
+        let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+        let yesterday = {
+            let d = chrono::Local::now().date_naive() - chrono::Duration::days(1);
+            d.format("%Y-%m-%d").to_string()
+        };
+        let tomorrow = {
+            let d = chrono::Local::now().date_naive() + chrono::Duration::days(1);
+            d.format("%Y-%m-%d").to_string()
+        };
+        // Use 8 days to be safely in the "Later" category (boundary is 7 days)
+        let next_week = {
+            let d = chrono::Local::now().date_naive() + chrono::Duration::days(8);
+            d.format("%Y-%m-%d").to_string()
+        };
+
+        assert_eq!(
+            DueStatus::from_due_date(Some(&yesterday)),
+            DueStatus::Overdue
+        );
+        assert_eq!(DueStatus::from_due_date(Some(&today)), DueStatus::Today);
+        assert_eq!(DueStatus::from_due_date(Some(&tomorrow)), DueStatus::Soon);
+        assert_eq!(DueStatus::from_due_date(Some(&next_week)), DueStatus::Later);
+        assert_eq!(DueStatus::from_due_date(None), DueStatus::None);
+    }
+
+    #[test]
+    fn test_task_parsing_subject_no_tags() {
+        use std::str::FromStr;
+        let raw = "(A) 2026-01-10 Test task +project @context due:2026-01-15";
+        let parsed = RawTask::from_str(raw).unwrap();
+
+        let app_task = AppTask::from_raw(1, raw.to_string(), parsed);
+
+        assert!(!app_task.subject.contains("@context"));
+        assert!(!app_task.subject.contains("+project"));
+
+        assert_eq!(app_task.contexts, vec!["context"]);
+        assert_eq!(app_task.projects, vec!["project"]);
+    }
+
+    #[test]
     fn test_task_input_validation() {
         let valid_input = TaskInput {
             description: "Valid task".to_string(),
@@ -270,5 +319,69 @@ mod tests {
             due_date: None,
         };
         assert!(invalid_priority.validate().is_err());
+    }
+
+    #[test]
+    fn test_priority_ext_trait() {
+        use todo_txt::Priority;
+
+        let priority_a = Priority::from(0u8);
+        let priority_z = Priority::from(25u8);
+        let lowest = Priority::lowest();
+
+        assert_eq!(priority_a.get_value(), 0);
+        assert_eq!(priority_z.get_value(), 25);
+        assert_eq!(lowest.get_value(), 26);
+    }
+
+    #[test]
+    fn test_due_status_boundary_dates() {
+        let today = chrono::Local::now().date_naive();
+        let day_after_next = today + chrono::Duration::days(8);
+        let day_before_next = today + chrono::Duration::days(7);
+
+        assert_eq!(
+            DueStatus::from_due_date(Some(&day_after_next.format("%Y-%m-%d").to_string())),
+            DueStatus::Later
+        );
+        assert_eq!(
+            DueStatus::from_due_date(Some(&day_before_next.format("%Y-%m-%d").to_string())),
+            DueStatus::Soon
+        );
+    }
+
+    #[test]
+    fn test_task_input_empty_projects_contexts() {
+        let input = TaskInput {
+            description: "Simple task".to_string(),
+            priority: None,
+            projects: vec![],
+            contexts: vec![],
+            due_date: None,
+        };
+
+        let result = input.to_todo_txt();
+        assert!(result.contains("Simple task"));
+        assert!(!result.contains('+'));
+        assert!(!result.contains('@'));
+    }
+
+    #[test]
+    fn test_task_input_multiple_projects_contexts() {
+        let input = TaskInput {
+            description: "Multi task".to_string(),
+            priority: Some('B'),
+            projects: vec!["project1".to_string(), "project2".to_string()],
+            contexts: vec!["home".to_string(), "work".to_string()],
+            due_date: Some("2026-02-01".to_string()),
+        };
+
+        let result = input.to_todo_txt();
+        assert!(result.contains("(B)"));
+        assert!(result.contains("+project1"));
+        assert!(result.contains("+project2"));
+        assert!(result.contains("@home"));
+        assert!(result.contains("@work"));
+        assert!(result.contains("due:2026-02-01"));
     }
 }

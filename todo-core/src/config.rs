@@ -103,3 +103,34 @@ pub fn get_todo_path() -> Result<PathBuf> {
     // Fall back to default path
     get_default_todo_path()
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_save_and_load_todo_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_path = temp_dir.path().join("test_todo.txt");
+
+        save_todo_path(&test_path).unwrap();
+
+        let loaded = load_saved_todo_path().unwrap();
+        assert!(loaded.is_some());
+        assert_eq!(loaded.unwrap(), test_path);
+    }
+
+    #[test]
+    fn test_get_config_dir() {
+        let config_dir = get_config_dir().unwrap();
+        assert!(config_dir.to_string_lossy().contains(".todo"));
+    }
+
+    #[test]
+    fn test_get_default_todo_path() {
+        let default_path = get_default_todo_path().unwrap();
+        assert!(default_path.to_string_lossy().contains("todo.txt"));
+    }
+}

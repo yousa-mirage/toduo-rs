@@ -326,4 +326,110 @@ mod tests {
         assert!(task.completed);
         assert!(task.finish_date.is_some());
     }
+
+    #[test]
+    fn test_uncomplete_task() {
+        let file = create_temp_todo_file("x 2026-01-10 2026-01-08 Completed task\n");
+        let service = TaskService::new(file.path());
+
+        let task = service.uncomplete_task(1).unwrap();
+        assert!(!task.completed);
+        assert!(task.finish_date.is_none());
+    }
+
+    #[test]
+    fn test_set_priority() {
+        let file = create_temp_todo_file("(A) 2026-01-10 Task without priority\n");
+        let service = TaskService::new(file.path());
+
+        let task = service.set_priority(1, Some('B')).unwrap();
+        assert_eq!(task.priority, Some('B'));
+        assert!(task.raw_content.contains("(B)"));
+    }
+
+    #[test]
+    fn test_remove_priority() {
+        let file = create_temp_todo_file("(A) 2026-01-10 Task with priority\n");
+        let service = TaskService::new(file.path());
+
+        let task = service.set_priority(1, None).unwrap();
+        assert!(task.priority.is_none());
+    }
+
+    #[test]
+    fn test_delete_task() {
+        let file = create_temp_todo_file("Task 1\nTask 2\nTask 3\n");
+        let service = TaskService::new(file.path());
+
+        service.delete_task(2).unwrap();
+
+        let tasks = service.load_tasks().unwrap();
+        assert_eq!(tasks.len(), 2);
+        // After deletion, remaining tasks get new IDs based on their new line numbers
+        assert_eq!(tasks[0].id, 1);
+        assert_eq!(tasks[1].id, 2);
+    }
+
+    #[test]
+    fn test_get_all_projects() {
+        let file = create_temp_todo_file(
+            "(A) Task +project1 @context1\n\
+             (B) Task +project2\n\
+             Task +project1 +project3\n",
+        );
+        let service = TaskService::new(file.path());
+
+        let projects = service.get_all_projects().unwrap();
+        assert_eq!(projects, vec!["project1", "project2", "project3"]);
+    }
+
+    #[test]
+    fn test_get_all_contexts() {
+        let file = create_temp_todo_file(
+            "(A) Task +project1 @context1\n\
+             (B) Task @context2 @context1\n\
+             Task @context3\n",
+        );
+        let service = TaskService::new(file.path());
+
+        let contexts = service.get_all_contexts().unwrap();
+        assert_eq!(contexts, vec!["context1", "context2", "context3"]);
+    }
+
+    #[test]
+    fn test_task_with_due_date() {
+        let file = create_temp_todo_file("(A) 2026-01-10 Task with due date due:2026-01-20\n");
+        let service = TaskService::new(file.path());
+
+        let tasks = service.load_tasks().unwrap();
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].due_date, Some("2026-01-20".to_string()));
+    }
+
+    #[test]
+    fn test_load_empty_file() {
+        let file = create_temp_todo_file("");
+        let service = TaskService::new(file.path());
+
+        let tasks = service.load_tasks().unwrap();
+        assert!(tasks.is_empty());
+    }
+
+    #[test]
+    fn test_complete_nonexistent_task() {
+        let file = create_temp_todo_file("Task 1\n");
+        let service = TaskService::new(file.path());
+
+        let result = service.complete_task(99);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_delete_nonexistent_task() {
+        let file = create_temp_todo_file("Task 1\n");
+        let service = TaskService::new(file.path());
+
+        let result = service.delete_task(99);
+        assert!(result.is_err());
+    }
 }
