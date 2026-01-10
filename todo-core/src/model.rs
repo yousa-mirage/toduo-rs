@@ -1,0 +1,223 @@
+//! Data models for todo-core
+
+use chrono::NaiveDate;
+use serde::{Deserialize, Serialize};
+use todo_txt::task::Simple as RawTask;
+use todo_txt::Priority;
+
+/// Application-level task wrapper
+///
+/// Wraps the raw `todo-txt` Task with additional metadata needed for UI operations.
+/// The `id` corresponds to the physical line number (1-based) in the todo.txt file.
+#[derive(Debug, Clone, Serialize)]
+pub struct AppTask {
+    /// Line number in the file (1-based index)
+    pub id: usize,
+    /// Original raw text content
+    pub raw_content: String,
+    /// Parsed task data from todo-txt crate
+    #[serde(skip)]
+    pub parsed: RawTask,
+    // Serializable fields extracted from parsed task
+    /// Task description/subject
+    pub subject: String,
+    /// Priority (A-Z) or None
+    pub priority: Option<char>,
+    /// Whether the task is completed
+    pub completed: bool,
+    /// Creation date
+    pub create_date: Option<String>,
+    /// Completion date (only if completed)
+    pub finish_date: Option<String>,
+    /// Due date from due:YYYY-MM-DD tag
+    pub due_date: Option<String>,
+    /// Project tags (+project)
+    pub projects: Vec<String>,
+    /// Context tags (@context)
+    pub contexts: Vec<String>,
+}
+
+impl AppTask {
+    /// Create an AppTask from a raw task and its line number
+    pub fn from_raw(id: usize, raw_content: String, parsed: RawTask) -> Self {
+        let subject = parsed.subject.clone();
+        let priority = if parsed.priority.is_lowest() {
+            None
+        } else {
+            Some((b'A' + parsed.priority.get_value()) as char)
+        };
+        let completed = parsed.finished;
+        let create_date = parsed.create_date.map(|d| d.format("%Y-%m-%d").to_string());
+        let finish_date = parsed.finish_date.map(|d| d.format("%Y-%m-%d").to_string());
+        let due_date = parsed.due_date.map(|d| d.format("%Y-%m-%d").to_string());
+        let projects = parsed.projects.clone();
+        let contexts = parsed.contexts.clone();
+
+        Self {
+            id,
+            raw_content,
+            parsed,
+            subject,
+            priority,
+            completed,
+            create_date,
+            finish_date,
+            due_date,
+            projects,
+            contexts,
+        }
+    }
+
+    /// Convert the task back to todo.txt format string
+    pub fn to_todo_txt(&self) -> String {
+        self.parsed.to_string()
+    }
+}
+
+/// Input data for creating a new task
+///
+/// This is the structured input from the UI that will be compiled
+/// into a valid todo.txt format string.
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskInput {
+    /// Main task description
+    pub description: String,
+    /// Priority (A-Z) or None
+    pub priority: Option<char>,
+    /// Project tags (without + prefix)
+    pub projects: Vec<String>,
+    /// Context tags (without @ prefix)
+    pub contexts: Vec<String>,
+    /// Due date in YYYY-MM-DD format
+    pub due_date: Option<String>,
+}
+
+impl TaskInput {
+    /// Build a todo.txt format string from the input
+    pub fn to_todo_txt(&self) -> String {
+        let mut parts = Vec::new();
+
+        // Priority
+        if let Some(p) = self.priority {
+            parts.push(format!("({}) ", p.to_ascii_uppercase()));
+        }
+
+        // Creation date (today)
+        let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+        parts.push(format!("{} ", today));
+
+        // Description
+        parts.push(self.description.clone());
+
+        // Projects
+        for proj in &self.projects {
+            parts.push(format!(" +{}", proj));
+        }
+
+        // Contexts
+        for ctx in &self.contexts {
+            parts.push(format!(" @{}", ctx));
+        }
+
+        // Due date
+        if let Some(ref due) = self.due_date {
+            parts.push(format!(" due:{}", due));
+        }
+
+        parts.concat()
+    }
+
+    /// Validate the input
+    pub fn validate(&self) -> Result<(), String> {
+        if self.description.trim().is_empty() {
+            return Err("Description cannot be empty".to_string());
+        }
+
+        if let Some(p) = self.priority {
+            if !p.is_ascii_uppercase() {
+                return Err("Priority must be A-Z".to_string());
+            }
+        }
+
+        if let Some(ref due) = self.due_date {
+            if NaiveDate::parse_from_str(due, "%Y-%m-%d").is_err() {
+                return Err("Due date must be in YYYY-MM-DD format".to_string());
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// Helper trait for Priority conversion
+pub trait PriorityExt {
+    fn get_value(&self) -> u8;
+}
+
+impl PriorityExt for Priority {
+    fn get_value(&self) -> u8 {
+        // Priority displays as (A), (B), etc. We need to extract the letter offset
+        let s = self.to_string();
+        if s.len() == 1 {
+            if let Some(c) = s.chars().next() {
+                if c.is_ascii_uppercase() {
+                    return c as u8 - b'A';
+                }
+            }
+        }
+        26 // lowest priority
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_task_input_to_todo_txt() {
+        let input = TaskInput {
+            description: "Write documentation".to_string(),
+            priority: Some('A'),
+            projects: vec!["todo-app".to_string()],
+            contexts: vec!["work".to_string()],
+            due_date: Some("2026-01-15".to_string()),
+        };
+
+        let result = input.to_todo_txt();
+        assert!(result.contains("(A)"));
+        assert!(result.contains("Write documentation"));
+        assert!(result.contains("+todo-app"));
+        assert!(result.contains("@work"));
+        assert!(result.contains("due:2026-01-15"));
+    }
+
+    #[test]
+    fn test_task_input_validation() {
+        let valid_input = TaskInput {
+            description: "Valid task".to_string(),
+            priority: Some('B'),
+            projects: vec![],
+            contexts: vec![],
+            due_date: None,
+        };
+        assert!(valid_input.validate().is_ok());
+
+        let empty_desc = TaskInput {
+            description: "   ".to_string(),
+            priority: None,
+            projects: vec![],
+            contexts: vec![],
+            due_date: None,
+        };
+        assert!(empty_desc.validate().is_err());
+
+        let invalid_priority = TaskInput {
+            description: "Task".to_string(),
+            priority: Some('a'),
+            projects: vec![],
+            contexts: vec![],
+            due_date: None,
+        };
+        assert!(invalid_priority.validate().is_err());
+    }
+}

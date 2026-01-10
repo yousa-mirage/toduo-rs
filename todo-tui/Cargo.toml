@@ -1,0 +1,14 @@
+[package]
+name = "todo-tui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+crossterm.workspace = true
+dirs.workspace = true
+ratatui.workspace = true
+todo-core = { version = "0.1.0", path = "../todo-core" }
+
+[lints]
+workspace = true
