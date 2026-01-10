@@ -206,13 +206,15 @@ const groupedTasks = computed(() => {
 .task-row {
   display: flex;
   align-items: flex-start;
-  padding: 0.5rem 0;
+  padding: 0.5rem var(--spacing-lg);
+  margin: 0 calc(-1 * var(--spacing-lg));
   border-radius: 4px;
   transition: background-color 0.1s;
 }
 
 .task-row:hover {
-  background-color: rgba(0,0,0,0.02);
+  background-color: rgba(0, 0, 0, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .task-row:hover .task-actions {
@@ -220,7 +222,9 @@ const groupedTasks = computed(() => {
 }
 
 .task-row.task-completed {
-  background-color: rgba(0, 0, 0, 0.03);
+  background-color: rgba(0, 0, 0, 0.02);
+  padding: 0.5rem var(--spacing-lg);
+  margin: 0 calc(-1 * var(--spacing-lg));
 }
 
 .task-row.task-completed .task-text {
