@@ -128,9 +128,7 @@ const icons = {
     <div class="sidebar-top">
       <button class="btn-add" @click="emit('add-task')" title="Add Task">
         <span class="icon-plus" v-html="icons.plus"></span>
-        <span class="nav-details">
-          <span class="label">Add Task</span>
-        </span>
+        <span class="btn-add-text">Add Task</span>
       </button>
     </div>
 
@@ -280,9 +278,7 @@ const icons = {
   
   display: flex;
   align-items: center;
-  /* Justify center to keep icon in middle when collapsed */
   justify-content: center;
-  
   gap: 8px;
   cursor: pointer;
   font-weight: 600;
@@ -295,6 +291,11 @@ const icons = {
   overflow: hidden;
   /* Prevent text wrapping during shrink */
   white-space: nowrap;
+}
+
+.btn-add-text {
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .btn-add:hover {
@@ -310,6 +311,10 @@ const icons = {
   /* height is already 44 */
   border-radius: 50%; /* Circle when collapsed */
   padding: 0;
+}
+
+.sidebar-collapsed .btn-add-text {
+  display: none;
 }
 
 .sidebar-collapsed .sidebar-top {
