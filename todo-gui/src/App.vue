@@ -47,27 +47,37 @@ const filteredTasks = computed(() => {
   } else if (currentFilter.value === 'today') {
       const today = new Date().toISOString().split('T')[0];
       result = result.filter(t => t.due_date === today);
+  } else if (currentFilter.value === 'next7') {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const next7 = new Date();
+      next7.setDate(now.getDate() + 7);
+      const next7Str = next7.toISOString().split('T')[0];
+      
+      result = result.filter(t => {
+          if (!t.due_date) return false;
+          return t.due_date >= todayStr && t.due_date <= next7Str;
+      });
   } else if (currentFilter.value.startsWith('project:')) {
       const p = currentFilter.value.replace('project:', '');
       result = result.filter(t => t.projects.includes(p));
   } else if (currentFilter.value.startsWith('context:')) {
       const c = currentFilter.value.replace('context:', '');
       result = result.filter(t => t.contexts.includes(c));
+  } else if (currentFilter.value.startsWith('priority:')) {
+      const p = currentFilter.value.replace('priority:', '');
+      result = result.filter(t => t.priority === p);
   }
   
-  // Always sort completed to bottom, usually handled by TaskList grouping, 
-  // but if we want strict sorting inside groups, we can do it here or let TaskList handle it.
-  // TaskList groups by priority.
-  // We should just pass filtered result.
   return result;
 });
 
-// Stats
-const stats = computed(() => ({
-  total: tasks.value.length,
-  completed: tasks.value.filter((t) => t.completed).length,
-  pending: tasks.value.filter((t) => !t.completed).length,
-}));
+// Stats (unused in new layout)
+// const stats = computed(() => ({
+//   total: tasks.value.length,
+//   completed: tasks.value.filter((t) => t.completed).length,
+//   pending: tasks.value.filter((t) => !t.completed).length,
+// }));
 
 // Methods
 async function loadTasks() {
@@ -153,10 +163,10 @@ onMounted(() => {
         <!-- Sidebar -->
         <Sidebar 
             :current-filter="currentFilter"
-            :projects="existingProjects"
-            :contexts="existingContexts"
             :tasks="tasks"
             @update:filter="handleFilterUpdate"
+            @add-task="showAddModal = true"
+            @open-path="selectDirectory"
         />
 
         <!-- Main Content Area -->
@@ -168,12 +178,7 @@ onMounted(() => {
                 <!-- Optional: Breadcrumb or filter name -->
               </div>
               <div class="header-actions">
-                 <button class="btn btn-icon-only" @click="selectDirectory" title="Change directory">
-                    📁
-                 </button>
-                 <button class="btn btn-primary" @click="showAddModal = true">
-                  <span class="btn-icon">+</span>
-                </button>
+                 <!-- Actions moved to sidebar -->
               </div>
             </header>
             

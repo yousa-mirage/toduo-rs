@@ -60,7 +60,18 @@ cargo test -p todo-core lib::<module_name>
 
 ## Code Style
 
-**In each session, when you have finished making your changes, you must run `cargo fmt` and `cargo clippy --all`**
+**In each session, when you have finished making your changes, you must run :**
+
+```bash
+cargo fmt --all
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cd todo-gui
+bun run format
+bun run type-check || bun x vue-tsc --noEmit
+bun run lint
+cd ../
+```
+
 Make sure the code format is consistent and there are no errors or warnings in the code. If there are any, continue to fix them.
 
 ### Rust Conventions

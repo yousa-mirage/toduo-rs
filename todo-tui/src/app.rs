@@ -312,20 +312,21 @@ impl App {
     }
 
     /// Change the todo directory and save the new path
+    #[allow(dead_code)]
     pub fn change_todo_directory(&mut self, path: &str) -> Result<()> {
         let new_path = std::path::PathBuf::from(path);
-        
+
         // Save the new path
         save_todo_path(&new_path)?;
-        
+
         // Create new service with the new path
         self.service = TaskService::new(&new_path);
-        
+
         // Load tasks from the new path
         self.refresh()?;
         self.selected = 0;
         self.status_message = Some(format!("Changed to: {}", path));
-        
+
         Ok(())
     }
 }

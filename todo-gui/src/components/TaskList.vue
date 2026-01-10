@@ -12,6 +12,7 @@ interface Task {
   due_date: string | null;
   projects: string[];
   contexts: string[];
+  raw_content: string;
 }
 
 const props = defineProps<{

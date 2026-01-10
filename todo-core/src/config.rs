@@ -20,8 +20,8 @@ struct ConfigToml {
 
 /// Get the config directory (~/.todo)
 pub fn get_config_dir() -> Result<PathBuf> {
-    let home_dir = dirs::home_dir()
-        .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
+    let home_dir =
+        dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
     let config_dir = home_dir.join(".todo");
 
     // Ensure the directory exists
@@ -51,8 +51,8 @@ pub fn load_saved_todo_path() -> Result<Option<PathBuf>> {
         .read_to_string(&mut content)
         .with_context(|| "Failed to read config file")?;
 
-    let config: ConfigToml = toml::from_str(&content)
-        .with_context(|| "Failed to parse config file")?;
+    let config: ConfigToml =
+        toml::from_str(&content).with_context(|| "Failed to parse config file")?;
 
     Ok(config.todo_path.map(PathBuf::from))
 }
@@ -65,12 +65,11 @@ pub fn save_todo_path(path: &Path) -> Result<()> {
         todo_path: Some(path.to_string_lossy().to_string()),
     };
 
-    let toml_content = toml::to_string(&config)
-        .with_context(|| "Failed to serialize config")?;
+    let toml_content = toml::to_string(&config).with_context(|| "Failed to serialize config")?;
 
     let mut file = File::create(&config_path)
         .with_context(|| format!("Failed to create config file: {:?}", config_path))?;
-    
+
     file.write_all(toml_content.as_bytes())
         .with_context(|| "Failed to write config file")?;
 

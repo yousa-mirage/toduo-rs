@@ -156,7 +156,10 @@ fn get_todo_path(state: State<AppState>) -> String {
 
 /// Select todo file directory
 #[tauri::command]
-async fn select_todo_directory(state: State<'_, AppState>, app: tauri::Window) -> Result<bool, String> {
+async fn select_todo_directory(
+    state: State<'_, AppState>,
+    app: tauri::Window,
+) -> Result<bool, String> {
     use std::sync::mpsc;
 
     let (tx, rx) = mpsc::channel();
@@ -199,7 +202,8 @@ fn init_todo_directory(state: State<AppState>, directory: String) -> Result<(), 
     let todo_path = PathBuf::from(directory).join("todo.txt");
 
     if !todo_path.exists() {
-        std::fs::File::create(&todo_path).map_err(|e| format!("Failed to create todo.txt: {}", e))?;
+        std::fs::File::create(&todo_path)
+            .map_err(|e| format!("Failed to create todo.txt: {}", e))?;
     }
 
     let service = TaskService::new(&todo_path);
