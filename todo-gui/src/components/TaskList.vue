@@ -235,6 +235,9 @@ const groupedTasks = computed(() => {
   color: white;
   margin-right: 0.5rem;
   flex-shrink: 0;
+  /* Fix vertical alignment */
+  line-height: 1;
+  padding-bottom: 2px; /* Push text up visually */
 }
 
 .group-line {
