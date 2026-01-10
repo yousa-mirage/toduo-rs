@@ -53,6 +53,11 @@ const firstDayOffset = computed(() => {
   return new Date(year, month, 1).getDay(); // 0 = Sunday
 });
 
+const paddingDays = computed(() => {
+  const used = firstDayOffset.value + daysInMonth.value;
+  return 42 - used;
+});
+
 // Navigation
 function prevMonth() {
   currentCursor.value = new Date(
@@ -166,6 +171,13 @@ onUnmounted(() => {
         >
           {{ day }}
         </div>
+        
+        <!-- Trailing Empty slots -->
+        <div 
+          v-for="n in paddingDays" 
+          :key="'end-empty-' + n" 
+          class="day empty"
+        ></div>
       </div>
       
       <div class="picker-footer">
@@ -294,8 +306,10 @@ onUnmounted(() => {
 }
 
 .day {
-    text-align: center;
-    padding: 6px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px; /* Fixed height for all days */
     font-size: 0.9rem;
     border-radius: 4px;
     cursor: pointer;
@@ -304,6 +318,13 @@ onUnmounted(() => {
 
 .day:hover {
     background-color: var(--color-bg);
+}
+
+.day.empty {
+    cursor: default;
+}
+.day.empty:hover {
+    background-color: transparent;
 }
 
 .day.today {
