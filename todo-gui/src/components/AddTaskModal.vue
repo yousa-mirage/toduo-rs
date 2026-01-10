@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import DatePicker from "./DatePicker.vue";
 
 defineProps<{
   existingProjects: string[];
@@ -25,7 +26,7 @@ const description = ref("");
 const priority = ref<string>("");
 const projectsInput = ref("");
 const contextsInput = ref("");
-const dueDate = ref("");
+const dueDate = ref<string | null>(null);
 
 // Validation
 const isValid = computed(() => description.value.trim().length > 0);
@@ -135,12 +136,8 @@ function handleOverlayClick(e: MouseEvent) {
         <!-- Due Date -->
         <div class="form-group">
           <label for="due-date">Due Date</label>
-          <input
-            id="due-date"
-            v-model="dueDate"
-            type="date"
-            class="form-input"
-          />
+          <DatePicker v-model="dueDate" placeholder="yyyy-mm-dd" />
+          <div class="form-hint">Format: yyyy-mm-dd</div>
         </div>
 
         <!-- Actions -->
@@ -243,7 +240,15 @@ function handleOverlayClick(e: MouseEvent) {
   border-radius: var(--radius-md);
   background-color: var(--color-bg);
   color: var(--color-text);
+  font-family: inherit;
+  height: 42px;
+  line-height: 1.5;
   transition: border-color 0.2s ease;
+}
+
+.form-input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.7;
 }
 
 .form-input:focus,
@@ -255,6 +260,7 @@ function handleOverlayClick(e: MouseEvent) {
 .form-hint {
   font-size: 0.75rem;
   color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
 }
 
 .modal-actions {
@@ -264,7 +270,7 @@ function handleOverlayClick(e: MouseEvent) {
   margin-top: var(--spacing-sm);
 }
 
-/* Button Styles (copied from App.vue for consistency) */
+/* Button Styles */
 .btn {
   display: inline-flex;
   align-items: center;

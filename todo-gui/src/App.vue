@@ -400,6 +400,7 @@ body {
 .scrollable-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: var(--spacing-lg);
 }
 
