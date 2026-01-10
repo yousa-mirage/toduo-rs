@@ -223,6 +223,10 @@ const groupedTasks = computed(() => {
   margin-bottom: 0.5rem;
 }
 
+.task-group:first-child .group-header {
+  margin-top: 0;
+}
+
 .group-badge {
   font-size: 1.2rem;
   font-weight: 800;
