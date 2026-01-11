@@ -1,23 +1,38 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import DatePicker from "./DatePicker.vue";
 
-defineProps<{
+// Types
+interface Task {
+  id: number;
+  subject: string;
+  priority: string | null;
+  completed: boolean;
+  create_date: string | null;
+  finish_date: string | null;
+  due_date: string | null;
+  projects: string[];
+  contexts: string[];
+  raw_content: string;
+}
+
+interface CreateTaskInput {
+  description: string;
+  priority: string | null;
+  projects: string[];
+  contexts: string[];
+  due_date: string | null;
+}
+
+const props = defineProps<{
   existingProjects: string[];
   existingContexts: string[];
+  editingTask?: Task | null;
+  isEditing?: boolean;
 }>();
 
 const emit = defineEmits<{
-  (
-    e: "submit",
-    input: {
-      description: string;
-      priority: string | null;
-      projects: string[];
-      contexts: string[];
-      due_date: string | null;
-    },
-  ): void;
+  (e: "submit", input: CreateTaskInput): void;
   (e: "close"): void;
 }>();
 
@@ -30,6 +45,21 @@ const dueDate = ref<string | null>(null);
 
 // Validation
 const isValid = computed(() => description.value.trim().length > 0);
+
+// Pre-fill form when editing
+watch(
+  () => props.editingTask,
+  (task) => {
+    if (task) {
+      description.value = task.subject;
+      priority.value = task.priority || "";
+      projectsInput.value = task.projects.map((p) => `+${p}`).join(" ");
+      contextsInput.value = task.contexts.map((c) => `@${c}`).join(" ");
+      dueDate.value = task.due_date;
+    }
+  },
+  { immediate: true },
+);
 
 // Parse tags from input
 function parseTags(input: string): string[] {
@@ -62,7 +92,7 @@ function handleOverlayClick(e: MouseEvent) {
   <div class="modal-overlay" @click="handleOverlayClick">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Add New Task</h2>
+        <h2>{{ isEditing ? "Edit Task" : "Add New Task" }}</h2>
         <button class="modal-close" @click="emit('close')" aria-label="Close">
           ×
         </button>
@@ -150,7 +180,7 @@ function handleOverlayClick(e: MouseEvent) {
             Cancel
           </button>
           <button type="submit" class="btn btn-primary" :disabled="!isValid">
-            Add Task
+            {{ isEditing ? "Update Task" : "Add Task" }}
           </button>
         </div>
       </form>

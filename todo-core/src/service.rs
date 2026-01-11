@@ -214,6 +214,43 @@ impl TaskService {
         Ok(())
     }
 
+    /// Update a task with new content
+    pub fn update_task(&self, id: usize, input: TaskInput) -> Result<AppTask> {
+        input.validate().map_err(TodoError::InvalidInput)?;
+
+        let mut tasks = self.load_tasks()?;
+
+        let task = tasks
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or(TodoError::TaskNotFound(id))?;
+
+        // Generate new todo.txt line from input
+        let todo_txt_line = input.to_todo_txt();
+
+        // Parse and replace
+        let raw_task = RawTask::from_str(&todo_txt_line).map_err(|_| TodoError::ParseError {
+            line: id,
+            message: "Failed to parse updated task".to_string(),
+        })?;
+
+        task.parsed = raw_task;
+        task.raw_content = todo_txt_line.clone();
+        task.subject = input.description;
+        task.priority = input.priority;
+        task.projects = input.projects;
+        task.contexts = input.contexts;
+        task.due_date = input.due_date;
+
+        self.save_tasks(&tasks)?;
+
+        let updated_task = tasks
+            .into_iter()
+            .find(|t| t.id == id)
+            .ok_or(TodoError::TaskNotFound(id))?;
+        Ok(updated_task)
+    }
+
     /// Save tasks to the todo.txt file (overwrites entire file)
     fn save_tasks(&self, tasks: &[AppTask]) -> Result<()> {
         let file = OpenOptions::new()

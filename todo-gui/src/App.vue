@@ -34,6 +34,8 @@ const isInitialLoading = ref(true);
 const isLoading = ref(false); // For background operations
 const error = ref<string | null>(null);
 const showAddModal = ref(false);
+const showEditModal = ref(false);
+const editingTask = ref<Task | null>(null);
 const existingProjects = ref<string[]>([]);
 const existingContexts = ref<string[]>([]);
 const todoPath = ref<string>("");
@@ -225,6 +227,48 @@ async function handleAddTask(input: CreateTaskInput) {
   }
 }
 
+async function handleEditTask(input: CreateTaskInput) {
+  if (!editingTask.value) return;
+
+  // Save scroll position before operation
+  if (scrollContainer.value) {
+    savedScrollPosition = scrollContainer.value.scrollTop;
+  }
+
+  try {
+    await invoke("update_task", {
+      id: editingTask.value.id,
+      input,
+    });
+    await refreshTasks();
+    // Restore scroll position after update
+    if (scrollContainer.value) {
+      requestAnimationFrame(() => {
+        if (scrollContainer.value) {
+          scrollContainer.value.scrollTop = savedScrollPosition;
+        }
+      });
+    }
+    showEditModal.value = false;
+    editingTask.value = null;
+  } catch (e) {
+    error.value = String(e);
+  }
+}
+
+function handleEdit(task: Task) {
+  editingTask.value = task;
+  showEditModal.value = true;
+}
+
+async function handleCopy(task: Task) {
+  try {
+    await invoke("write_text_to_clipboard", { text: task.raw_content });
+  } catch (e) {
+    error.value = String(e);
+  }
+}
+
 function handleFilterUpdate(newFilter: string) {
   currentFilter.value = newFilter;
 }
@@ -288,6 +332,8 @@ onMounted(() => {
             @toggle-complete="handleToggleComplete"
             @delete="handleDeleteTask"
             @set-priority="handleSetPriority"
+            @edit="handleEdit"
+            @copy="handleCopy"
           />
         </div>
       </main>
@@ -300,6 +346,20 @@ onMounted(() => {
       :existing-contexts="existingContexts"
       @submit="handleAddTask"
       @close="showAddModal = false"
+    />
+
+    <!-- Edit Task Modal -->
+    <AddTaskModal
+      v-if="showEditModal"
+      :existing-projects="existingProjects"
+      :existing-contexts="existingContexts"
+      :editing-task="editingTask"
+      :is-editing="true"
+      @submit="handleEditTask"
+      @close="
+        showEditModal = false;
+        editingTask = null;
+      "
     />
   </div>
 </template>
@@ -339,6 +399,12 @@ onMounted(() => {
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 
   --font-size: 16px;
 

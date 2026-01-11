@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, onMounted, onUnmounted } from "vue";
+import TaskContextMenu from "./TaskContextMenu.vue";
 
 // Types
 interface Task {
@@ -24,7 +25,72 @@ const emit = defineEmits<{
   (e: "toggle-complete", task: Task): void;
   (e: "delete", task: Task): void;
   (e: "set-priority", task: Task, priority: string | null): void;
+  (e: "edit", task: Task): void;
+  (e: "copy", task: Task): void;
 }>();
+
+// Context menu state
+const contextMenuVisible = ref(false);
+const contextMenuX = ref(0);
+const contextMenuY = ref(0);
+const contextMenuTask = ref<Task | null>(null);
+
+function handleTaskClick(task: Task) {
+  emit("edit", task);
+}
+
+function handleContextMenu(e: MouseEvent, task: Task) {
+  e.preventDefault();
+  contextMenuX.value = e.clientX;
+  contextMenuY.value = e.clientY;
+  contextMenuTask.value = task;
+  contextMenuVisible.value = true;
+}
+
+function handleContextMenuEdit(task: Task) {
+  emit("edit", task);
+}
+
+function handleContextMenuCopy(task: Task) {
+  emit("copy", task);
+}
+
+function handleContextMenuDelete(task: Task) {
+  emit("delete", task);
+}
+
+function handleContextMenuClose() {
+  contextMenuVisible.value = false;
+  contextMenuTask.value = null;
+}
+
+function handleClickOutside(e: MouseEvent) {
+  const target = e.target as HTMLElement;
+  if (target.closest(".context-menu")) {
+    return;
+  }
+  contextMenuVisible.value = false;
+  contextMenuTask.value = null;
+}
+
+function handleDocumentContextMenu(e: MouseEvent) {
+  // Prevent browser context menu globally
+  e.preventDefault();
+}
+
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+  document.addEventListener("contextmenu", handleDocumentContextMenu, {
+    capture: true,
+  });
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener("contextmenu", handleDocumentContextMenu, {
+    capture: true,
+  });
+});
 
 function getPriorityClass(priority: string | null): string {
   if (!priority) return "";
@@ -124,6 +190,8 @@ const groupedTasks = computed(() => {
               :key="task.id"
               class="task-row"
               :class="{ 'task-completed': task.completed }"
+              @click="handleTaskClick(task)"
+              @contextmenu.prevent="handleContextMenu($event, task)"
             >
               <!-- Custom Radio-style Checkbox -->
               <div
@@ -202,6 +270,18 @@ const groupedTasks = computed(() => {
       </div>
     </TransitionGroup>
   </div>
+
+  <!-- Context Menu -->
+  <TaskContextMenu
+    :visible="contextMenuVisible"
+    :x="contextMenuX"
+    :y="contextMenuY"
+    :task="contextMenuTask"
+    @edit="handleContextMenuEdit"
+    @copy="handleContextMenuCopy"
+    @delete="handleContextMenuDelete"
+    @close="handleContextMenuClose"
+  />
 </template>
 
 <style scoped>

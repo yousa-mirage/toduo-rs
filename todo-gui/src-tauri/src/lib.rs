@@ -134,6 +134,29 @@ fn delete_task(state: State<AppState>, id: usize) -> Result<(), String> {
     service.delete_task(id).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn update_task(state: State<AppState>, id: usize, input: CreateTaskInput) -> Result<Task, String> {
+    let mut service = state.service.lock().map_err(|e| e.to_string())?;
+    let service = service.as_mut().ok_or("No todo file selected")?;
+    service
+        .update_task(id, input.into())
+        .map(Task::from)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_task(state: State<AppState>, id: usize) -> Result<Task, String> {
+    let service = state.service.lock().map_err(|e| e.to_string())?;
+    let service = service.as_ref().ok_or("No todo file selected")?;
+    service
+        .load_tasks()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .find(|t| t.id == id)
+        .map(Task::from)
+        .ok_or_else(|| format!("Task with id {} not found", id))
+}
+
 /// Get all projects
 #[tauri::command]
 fn get_projects(state: State<AppState>) -> Result<Vec<String>, String> {
@@ -154,6 +177,14 @@ fn get_contexts(state: State<AppState>) -> Result<Vec<String>, String> {
 #[tauri::command]
 fn get_todo_path(state: State<AppState>) -> String {
     state.todo_path.to_string_lossy().to_string()
+}
+
+/// Write text to clipboard
+#[tauri::command]
+fn write_text_to_clipboard(text: String) -> Result<(), String> {
+    use clipboard_win::set;
+    use clipboard_win::Unicode;
+    set(Unicode, text).map_err(|e| format!("Failed to write to clipboard: {}", e))
 }
 
 /// Select todo file directory
@@ -246,14 +277,17 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_tasks,
+            get_task,
             add_task,
             complete_task,
             uncomplete_task,
             set_priority,
+            update_task,
             delete_task,
             get_projects,
             get_contexts,
             get_todo_path,
+            write_text_to_clipboard,
             select_todo_directory,
             init_todo_directory,
         ])
