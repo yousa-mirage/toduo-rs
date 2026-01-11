@@ -7,7 +7,9 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
-use todo_core::{AppTask, DueStatus, TaskInput, TaskService, save_todo_path};
+use todo_core::{
+    AppTask, DueStatus, GuiConfig, TaskInput, TaskService, load_config, save_gui_config, save_todo_path,
+};
 
 /// Application state managed by Tauri
 pub struct AppState {
@@ -190,10 +192,7 @@ fn write_text_to_clipboard(text: String) -> Result<(), String> {
 
 /// Select todo file directory
 #[tauri::command]
-async fn select_todo_directory(
-    state: State<'_, AppState>,
-    app: tauri::Window,
-) -> Result<bool, String> {
+async fn select_todo_directory(state: State<'_, AppState>, app: tauri::Window) -> Result<bool, String> {
     use std::sync::mpsc;
 
     let (tx, rx) = mpsc::channel();
@@ -241,8 +240,7 @@ fn init_todo_directory(state: State<AppState>, directory: String) -> Result<(), 
     let todo_path = PathBuf::from(directory).join("todo.txt");
 
     if !todo_path.exists() {
-        std::fs::File::create(&todo_path)
-            .map_err(|e| format!("Failed to create todo.txt: {}", e))?;
+        std::fs::File::create(&todo_path).map_err(|e| format!("Failed to create todo.txt: {}", e))?;
     }
 
     // Save the path to config
@@ -258,6 +256,18 @@ fn init_todo_directory(state: State<AppState>, directory: String) -> Result<(), 
 #[tauri::command]
 fn exit_app(app: tauri::AppHandle) {
     app.exit(0);
+}
+
+#[tauri::command]
+fn get_gui_config() -> Result<GuiConfig, String> {
+    load_config()
+        .map(|c| c.gui.unwrap_or_default())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn update_gui_config(config: GuiConfig) -> Result<(), String> {
+    save_gui_config(config).map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -346,6 +356,8 @@ pub fn run() {
             select_todo_directory,
             init_todo_directory,
             exit_app,
+            get_gui_config,
+            update_gui_config,
         ])
         .run(tauri::generate_context!())
     {

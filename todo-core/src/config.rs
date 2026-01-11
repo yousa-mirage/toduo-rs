@@ -7,15 +7,24 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 
 /// Configuration file name
 const CONFIG_FILE_NAME: &str = "config.toml";
 
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+pub struct GuiConfig {
+    pub theme: Option<String>,
+    pub close_to_tray: Option<bool>,
+}
+
 /// Toml representation of the config
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
-struct ConfigToml {
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+pub struct AppConfig {
     /// Last used todo.txt path
-    todo_path: Option<String>,
+    pub todo_path: Option<String>,
+    /// GUI specific configuration
+    pub gui: Option<GuiConfig>,
 }
 
 /// Get the config directory (~/.todo)
@@ -37,12 +46,12 @@ pub fn get_config_path() -> Result<PathBuf> {
     Ok(config_dir.join(CONFIG_FILE_NAME))
 }
 
-/// Load the saved todo path from config
-pub fn load_saved_todo_path() -> Result<Option<PathBuf>> {
+/// Load the full configuration
+pub fn load_config() -> Result<AppConfig> {
     let config_path = get_config_path()?;
 
     if !config_path.exists() {
-        return Ok(None);
+        return Ok(AppConfig::default());
     }
 
     let mut content = String::new();
@@ -51,21 +60,16 @@ pub fn load_saved_todo_path() -> Result<Option<PathBuf>> {
         .read_to_string(&mut content)
         .with_context(|| "Failed to read config file")?;
 
-    let config: ConfigToml =
-        toml::from_str(&content).with_context(|| "Failed to parse config file")?;
+    let config: AppConfig = toml::from_str(&content).with_context(|| "Failed to parse config file")?;
 
-    Ok(config.todo_path.map(PathBuf::from))
+    Ok(config)
 }
 
-/// Save the todo path to config
-pub fn save_todo_path(path: &Path) -> Result<()> {
+/// Save the full configuration
+pub fn save_config(config: &AppConfig) -> Result<()> {
     let config_path = get_config_path()?;
 
-    let config = ConfigToml {
-        todo_path: Some(path.to_string_lossy().to_string()),
-    };
-
-    let toml_content = toml::to_string(&config).with_context(|| "Failed to serialize config")?;
+    let toml_content = toml::to_string_pretty(config).with_context(|| "Failed to serialize config")?;
 
     let mut file = File::create(&config_path)
         .with_context(|| format!("Failed to create config file: {:?}", config_path))?;
@@ -74,6 +78,26 @@ pub fn save_todo_path(path: &Path) -> Result<()> {
         .with_context(|| "Failed to write config file")?;
 
     Ok(())
+}
+
+/// Load the saved todo path from config
+pub fn load_saved_todo_path() -> Result<Option<PathBuf>> {
+    let config = load_config()?;
+    Ok(config.todo_path.map(PathBuf::from))
+}
+
+/// Save the todo path to config
+pub fn save_todo_path(path: &Path) -> Result<()> {
+    let mut config = load_config().unwrap_or_default();
+    config.todo_path = Some(path.to_string_lossy().to_string());
+    save_config(&config)
+}
+
+/// Save the GUI configuration
+pub fn save_gui_config(gui_config: GuiConfig) -> Result<()> {
+    let mut config = load_config().unwrap_or_default();
+    config.gui = Some(gui_config);
+    save_config(&config)
 }
 
 /// Get the default todo.txt path (~/.todo/todo.txt)

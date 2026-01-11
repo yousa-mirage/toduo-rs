@@ -292,6 +292,12 @@ function handleGlobalKeydown(e: KeyboardEvent) {
 }
 
 // --- Settings Logic ---
+
+interface GuiConfig {
+  theme: string | null;
+  close_to_tray: boolean | null;
+}
+
 // Apply theme
 function applyTheme(theme: "light" | "dark" | "system") {
   // Clear manual class
@@ -306,31 +312,48 @@ function applyTheme(theme: "light" | "dark" | "system") {
   }
 }
 
+// Save settings to backend
+async function saveSettings() {
+  const config: GuiConfig = {
+    theme: settingTheme.value,
+    close_to_tray: settingCloseToTray.value,
+  };
+  try {
+    await invoke("update_gui_config", { config });
+  } catch (e) {
+    console.error("Failed to save settings:", e);
+  }
+}
+
 // Watch theme changes
 watch(settingTheme, (newVal) => {
-  localStorage.setItem("todo-gui-theme", newVal);
   applyTheme(newVal);
+  saveSettings();
 });
 
 // Watch close to tray
-watch(settingCloseToTray, (newVal) => {
-  localStorage.setItem("todo-gui-close-to-tray", JSON.stringify(newVal));
+watch(settingCloseToTray, () => {
+  saveSettings();
 });
 
 // Initialize Settings
 let unlistenClose: (() => void) | null = null;
 
 async function initSettings() {
-  const savedTheme = localStorage.getItem("todo-gui-theme");
-  if (savedTheme) {
-    settingTheme.value = savedTheme as "light" | "dark" | "system";
+  try {
+    const config = await invoke<GuiConfig>("get_gui_config");
+    if (config.theme) {
+      settingTheme.value = config.theme as "light" | "dark" | "system";
+    }
+    if (config.close_to_tray !== null) {
+      settingCloseToTray.value = config.close_to_tray;
+    }
+  } catch (e) {
+    console.error("Failed to load settings:", e);
   }
-  applyTheme(settingTheme.value);
 
-  const savedTray = localStorage.getItem("todo-gui-close-to-tray");
-  if (savedTray) {
-    settingCloseToTray.value = JSON.parse(savedTray);
-  }
+  // Apply initial theme
+  applyTheme(settingTheme.value);
 
   // System listener
   window
@@ -346,18 +369,16 @@ async function initSettings() {
     });
 
   // Handle Minimize to Tray
-  // Note: Only works if backend supports tray hiding
   const appWindow = getCurrentWindow();
-  // Remove existing listener if any (though onMounted runs once usually, in HMR it helps)
+  // Remove existing listener if any
   if (unlistenClose) {
     unlistenClose();
     unlistenClose = null;
   }
 
   unlistenClose = await appWindow.onCloseRequested(async (event) => {
-    // Read directly from storage to avoid stale state
-    const storedVal = localStorage.getItem("todo-gui-close-to-tray");
-    const shouldMin = storedVal ? JSON.parse(storedVal) : false;
+    // Read current value
+    const shouldMin = settingCloseToTray.value;
 
     if (shouldMin) {
       event.preventDefault();
@@ -367,13 +388,8 @@ async function initSettings() {
         console.error("Failed to hide window", e);
       }
     } else {
-      // If the user wants to truly QUIT when closing (not just close window and leave tray),
-      // we should call exit explicitly.
-      // For a desktop text editor / utility with tray, standard is often:
-      // Close -> Tray.
-      // But if user disabled "Minimize to Tray", they likely expect "Quit".
-      // Let's force exit if they disabled the "hide" feature.
-      event.preventDefault(); // Prevent default close, use strict exit
+      // Force exit if not minimizing
+      event.preventDefault();
       await invoke("exit_app");
     }
   });
