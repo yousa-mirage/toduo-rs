@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import TaskList from "./components/TaskList.vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
@@ -276,9 +276,22 @@ function handleFilterUpdate(newFilter: string) {
   currentFilter.value = newFilter;
 }
 
+function handleGlobalKeydown(e: KeyboardEvent) {
+  // Ctrl+A (Windows/Linux) or Cmd+A (Mac) to Open Add Task
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+    e.preventDefault();
+    showAddModal.value = true;
+  }
+}
+
 // Initialize
 onMounted(() => {
   loadTasks();
+  window.addEventListener("keydown", handleGlobalKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleGlobalKeydown);
 });
 </script>
 
@@ -420,6 +433,15 @@ onMounted(() => {
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+  user-select: none; /* Disable text selection globally */
+  -webkit-user-select: none;
+}
+
+/* Allow selection in inputs */
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 </style>
 
