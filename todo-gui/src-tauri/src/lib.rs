@@ -182,14 +182,6 @@ fn get_todo_path(state: State<AppState>) -> Result<String, String> {
     Ok(path.to_string_lossy().to_string())
 }
 
-/// Write text to clipboard
-#[tauri::command]
-fn write_text_to_clipboard(text: String) -> Result<(), String> {
-    use clipboard_win::Unicode;
-    use clipboard_win::set;
-    set(Unicode, text).map_err(|e| format!("Failed to write to clipboard: {}", e))
-}
-
 /// Select todo file directory
 #[tauri::command]
 async fn select_todo_directory(state: State<'_, AppState>, app: tauri::Window) -> Result<bool, String> {
@@ -352,7 +344,6 @@ pub fn run() {
             get_projects,
             get_contexts,
             get_todo_path,
-            write_text_to_clipboard,
             select_todo_directory,
             init_todo_directory,
             exit_app,
