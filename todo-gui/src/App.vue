@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import TaskList from "./components/TaskList.vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
 import SidebarNav from "./components/SidebarNav.vue";
+import SettingsModal from "./components/SettingsModal.vue";
 
 // Types
 interface Task {
@@ -35,6 +37,7 @@ const isLoading = ref(false); // For background operations
 const error = ref<string | null>(null);
 const showAddModal = ref(false);
 const showEditModal = ref(false);
+const showSettingsModal = ref(false);
 const editingTask = ref<Task | null>(null);
 const existingProjects = ref<string[]>([]);
 const existingContexts = ref<string[]>([]);
@@ -42,6 +45,10 @@ const todoPath = ref<string>("");
 const currentFilter = ref("all");
 const scrollContainer = ref<HTMLElement | null>(null);
 let savedScrollPosition = 0;
+
+// Settings State
+const settingCloseToTray = ref(false);
+const settingTheme = ref<"light" | "dark" | "system">("light");
 
 // Computed: Filtered Tasks
 const filteredTasks = computed(() => {
@@ -284,14 +291,107 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   }
 }
 
+// --- Settings Logic ---
+// Apply theme
+function applyTheme(theme: "light" | "dark" | "system") {
+  const root = document.documentElement;
+  // Clear manual class
+  document.body.classList.remove("dark-theme");
+
+  if (theme === "dark") {
+    document.body.classList.add("dark-theme");
+  } else if (theme === "system") {
+    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      document.body.classList.add("dark-theme");
+    }
+  }
+}
+
+// Watch theme changes
+watch(settingTheme, (newVal) => {
+  localStorage.setItem("todo-gui-theme", newVal);
+  applyTheme(newVal);
+});
+
+// Watch close to tray
+watch(settingCloseToTray, (newVal) => {
+  localStorage.setItem("todo-gui-close-to-tray", JSON.stringify(newVal));
+});
+
+// Initialize Settings
+let unlistenClose: (() => void) | null = null;
+
+async function initSettings() {
+  const savedTheme = localStorage.getItem("todo-gui-theme");
+  if (savedTheme) {
+    settingTheme.value = savedTheme as any;
+  }
+  applyTheme(settingTheme.value);
+
+  const savedTray = localStorage.getItem("todo-gui-close-to-tray");
+  if (savedTray) {
+    settingCloseToTray.value = JSON.parse(savedTray);
+  }
+
+  // System listener
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", (e) => {
+      if (settingTheme.value === "system") {
+        if (e.matches) {
+          document.body.classList.add("dark-theme");
+        } else {
+          document.body.classList.remove("dark-theme");
+        }
+      }
+    });
+
+  // Handle Minimize to Tray
+  // Note: Only works if backend supports tray hiding
+  const appWindow = getCurrentWindow();
+  // Remove existing listener if any (though onMounted runs once usually, in HMR it helps)
+  if (unlistenClose) {
+    unlistenClose();
+    unlistenClose = null;
+  }
+  
+  unlistenClose = await appWindow.onCloseRequested(async (event) => {
+    // Read directly from storage to avoid stale state
+    const storedVal = localStorage.getItem("todo-gui-close-to-tray");
+    const shouldMin = storedVal ? JSON.parse(storedVal) : false;
+    
+    if (shouldMin) {
+      event.preventDefault();
+      try {
+        await appWindow.hide();
+      } catch (e) {
+        console.error("Failed to hide window", e);
+      }
+    } else {
+        // If the user wants to truly QUIT when closing (not just close window and leave tray),
+        // we should call exit explicitly.
+        // For a desktop text editor / utility with tray, standard is often:
+        // Close -> Tray.
+        // But if user disabled "Minimize to Tray", they likely expect "Quit".
+        // Let's force exit if they disabled the "hide" feature.
+        event.preventDefault(); // Prevent default close, use strict exit
+        await invoke("exit_app");
+    }
+  });
+}
+
 // Initialize
 onMounted(() => {
   loadTasks();
+  initSettings();
   window.addEventListener("keydown", handleGlobalKeydown);
 });
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
+  if (unlistenClose) {
+    unlistenClose();
+  }
 });
 </script>
 
@@ -304,6 +404,7 @@ onUnmounted(() => {
         :tasks="tasks"
         @update:filter="handleFilterUpdate"
         @add-task="showAddModal = true"
+        @open-settings="showSettingsModal = true"
         @open-path="selectDirectory"
       />
 
@@ -312,7 +413,7 @@ onUnmounted(() => {
         <!-- Header -->
         <header class="app-header">
           <div class="header-left">
-            <h1 class="app-title" :title="todoPath">Todo.txt</h1>
+            <h1 class="app-title">Todo.txt</h1>
           </div>
           <div class="header-actions">
             <!-- Actions moved to sidebar -->
@@ -377,6 +478,18 @@ onUnmounted(() => {
         editingTask = null;
       "
     />
+
+    <!-- Settings Modal -->
+    <SettingsModal
+      v-if="showSettingsModal"
+      :current-path="todoPath"
+      :close-to-tray="settingCloseToTray"
+      :theme="settingTheme"
+      @update:close-to-tray="(v) => (settingCloseToTray = v)"
+      @update:theme="(v) => (settingTheme = v)"
+      @change-folder="selectDirectory"
+      @close="showSettingsModal = false"
+    />
   </div>
 </template>
 
@@ -437,11 +550,57 @@ body {
   -webkit-user-select: none;
 }
 
+/* Dark Theme Overrides */
+body.dark-theme {
+    --color-bg: #1e293b;
+    --color-bg-secondary: #0f172a;
+    --color-text: #f1f5f9;
+    --color-text-secondary: #94a3b8; /* Keep secondary text somewhat legible but dim */
+    --color-border: #334155;
+    
+    /* Slightly Adjust Primary if needed */
+    --color-primary: #60a5fa; 
+    --color-primary-hover: #3b82f6;
+
+    /* Shadows might need inversion or lightening if really needed, but defaults are often ok-ish or invisible */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
 /* Allow selection in inputs */
 input,
 textarea {
   user-select: text;
   -webkit-user-select: text;
+}
+
+/* Custom Scrollbar for WebKit (Chrome, Safari, newer Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark theme scrollbar */
+body.dark-theme ::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 </style>
 
