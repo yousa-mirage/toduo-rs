@@ -12,7 +12,7 @@ use todo_core::{AppTask, DueStatus, TaskInput, TaskService, save_todo_path};
 /// Application state managed by Tauri
 pub struct AppState {
     pub service: Mutex<Option<TaskService>>,
-    pub todo_path: PathBuf,
+    pub todo_path: Mutex<PathBuf>,
 }
 
 /// Serializable task for frontend
@@ -175,8 +175,9 @@ fn get_contexts(state: State<AppState>) -> Result<Vec<String>, String> {
 
 /// Get current todo file path
 #[tauri::command]
-fn get_todo_path(state: State<AppState>) -> String {
-    state.todo_path.to_string_lossy().to_string()
+fn get_todo_path(state: State<AppState>) -> Result<String, String> {
+    let path = state.todo_path.lock().map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().to_string())
 }
 
 /// Write text to clipboard
@@ -208,7 +209,6 @@ async fn select_todo_directory(
     let path = rx.recv_timeout(std::time::Duration::from_secs(60));
 
     if let Ok(Some(path)) = path {
-        // Convert FilePath to PathBuf
         let path_buf = path
             .as_path()
             .ok_or_else(|| String::from("Invalid path"))?
@@ -220,11 +220,14 @@ async fn select_todo_directory(
                 .map_err(|e| format!("Failed to create todo.txt: {}", e))?;
         }
 
-        // Save the selected path to config
         save_todo_path(&todo_path).map_err(|e| format!("Failed to save todo path: {}", e))?;
 
-        let mut service = state.service.lock().map_err(|e| e.to_string())?;
-        *service = Some(TaskService::new(&todo_path));
+        let mut state_guard = state.service.lock().map_err(|e| e.to_string())?;
+        *state_guard = Some(TaskService::new(&todo_path));
+
+        drop(state_guard);
+        let mut path_guard = state.todo_path.lock().map_err(|e| e.to_string())?;
+        *path_guard = todo_path.clone();
 
         return Ok(true);
     }
@@ -285,8 +288,13 @@ pub fn run() {
             let show_i = MenuItem::with_id(app, "show", "Show Tasks", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
+            let icon = if let Some(icon_ref) = app.default_window_icon() {
+                icon_ref.clone()
+            } else {
+                tauri::image::Image::<'static>::new_owned(Vec::new(), 1, 1)
+            };
             let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(icon)
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
@@ -320,7 +328,7 @@ pub fn run() {
         })
         .manage(AppState {
             service: Mutex::new(Some(service)),
-            todo_path,
+            todo_path: Mutex::new(todo_path),
         })
         .invoke_handler(tauri::generate_handler![
             get_tasks,

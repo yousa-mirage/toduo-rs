@@ -294,7 +294,6 @@ function handleGlobalKeydown(e: KeyboardEvent) {
 // --- Settings Logic ---
 // Apply theme
 function applyTheme(theme: "light" | "dark" | "system") {
-  const root = document.documentElement;
   // Clear manual class
   document.body.classList.remove("dark-theme");
 
@@ -324,7 +323,7 @@ let unlistenClose: (() => void) | null = null;
 async function initSettings() {
   const savedTheme = localStorage.getItem("todo-gui-theme");
   if (savedTheme) {
-    settingTheme.value = savedTheme as any;
+    settingTheme.value = savedTheme as "light" | "dark" | "system";
   }
   applyTheme(settingTheme.value);
 
@@ -354,12 +353,12 @@ async function initSettings() {
     unlistenClose();
     unlistenClose = null;
   }
-  
+
   unlistenClose = await appWindow.onCloseRequested(async (event) => {
     // Read directly from storage to avoid stale state
     const storedVal = localStorage.getItem("todo-gui-close-to-tray");
     const shouldMin = storedVal ? JSON.parse(storedVal) : false;
-    
+
     if (shouldMin) {
       event.preventDefault();
       try {
@@ -368,14 +367,14 @@ async function initSettings() {
         console.error("Failed to hide window", e);
       }
     } else {
-        // If the user wants to truly QUIT when closing (not just close window and leave tray),
-        // we should call exit explicitly.
-        // For a desktop text editor / utility with tray, standard is often:
-        // Close -> Tray.
-        // But if user disabled "Minimize to Tray", they likely expect "Quit".
-        // Let's force exit if they disabled the "hide" feature.
-        event.preventDefault(); // Prevent default close, use strict exit
-        await invoke("exit_app");
+      // If the user wants to truly QUIT when closing (not just close window and leave tray),
+      // we should call exit explicitly.
+      // For a desktop text editor / utility with tray, standard is often:
+      // Close -> Tray.
+      // But if user disabled "Minimize to Tray", they likely expect "Quit".
+      // Let's force exit if they disabled the "hide" feature.
+      event.preventDefault(); // Prevent default close, use strict exit
+      await invoke("exit_app");
     }
   });
 }
@@ -552,20 +551,20 @@ body {
 
 /* Dark Theme Overrides */
 body.dark-theme {
-    --color-bg: #1e293b;
-    --color-bg-secondary: #0f172a;
-    --color-text: #f1f5f9;
-    --color-text-secondary: #94a3b8; /* Keep secondary text somewhat legible but dim */
-    --color-border: #334155;
-    
-    /* Slightly Adjust Primary if needed */
-    --color-primary: #60a5fa; 
-    --color-primary-hover: #3b82f6;
+  --color-bg: #1e293b;
+  --color-bg-secondary: #0f172a;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8; /* Keep secondary text somewhat legible but dim */
+  --color-border: #334155;
 
-    /* Shadows might need inversion or lightening if really needed, but defaults are often ok-ish or invisible */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  /* Slightly Adjust Primary if needed */
+  --color-primary: #60a5fa;
+  --color-primary-hover: #3b82f6;
+
+  /* Shadows might need inversion or lightening if really needed, but defaults are often ok-ish or invisible */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
 /* Allow selection in inputs */

@@ -171,10 +171,10 @@ impl TaskService {
 
     /// Update a task's priority
     pub fn set_priority(&self, id: usize, priority: Option<char>) -> Result<AppTask> {
-        if let Some(p) = priority {
-            if !p.is_ascii_uppercase() {
-                return Err(TodoError::InvalidInput("Priority must be A-Z".to_string()).into());
-            }
+        if let Some(p) = priority
+            && !p.is_ascii_uppercase()
+        {
+            return Err(TodoError::InvalidInput("Priority must be A-Z".to_string()).into());
         }
 
         let mut tasks = self.load_tasks()?;
@@ -468,5 +468,107 @@ mod tests {
 
         let result = service.delete_task(99);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_task() {
+        let file = create_temp_todo_file("(A) 2026-01-10 Original task +project1\n");
+        let service = TaskService::new(file.path());
+
+        let input = TaskInput {
+            description: "Updated task".to_string(),
+            priority: Some('B'),
+            projects: vec!["project2".to_string()],
+            contexts: vec!["context1".to_string()],
+            due_date: Some("2026-02-01".to_string()),
+        };
+
+        let updated = service.update_task(1, input).unwrap();
+        assert_eq!(updated.subject, "Updated task");
+        assert_eq!(updated.priority, Some('B'));
+        assert_eq!(updated.projects, vec!["project2"]);
+        assert_eq!(updated.contexts, vec!["context1"]);
+        assert_eq!(updated.due_date, Some("2026-02-01".to_string()));
+
+        // Verify persistence
+        let tasks = service.load_tasks().unwrap();
+        assert_eq!(tasks.len(), 1);
+        assert!(tasks[0].raw_content.contains("Updated task"));
+    }
+
+    #[test]
+    fn test_update_task_validation_error() {
+        let file = create_temp_todo_file("Task 1\n");
+        let service = TaskService::new(file.path());
+
+        let invalid_input = TaskInput {
+            description: "   ".to_string(),
+            priority: None,
+            projects: vec![],
+            contexts: vec![],
+            due_date: None,
+        };
+
+        let result = service.update_task(1, invalid_input);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_nonexistent_task() {
+        let file = create_temp_todo_file("Task 1\n");
+        let service = TaskService::new(file.path());
+
+        let input = TaskInput {
+            description: "Updated task".to_string(),
+            priority: None,
+            projects: vec![],
+            contexts: vec![],
+            due_date: None,
+        };
+
+        let result = service.update_task(99, input);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_all_projects_empty() {
+        let file = create_temp_todo_file("");
+        let service = TaskService::new(file.path());
+
+        let projects = service.get_all_projects().unwrap();
+        assert!(projects.is_empty());
+    }
+
+    #[test]
+    fn test_get_all_contexts_empty() {
+        let file = create_temp_todo_file("");
+        let service = TaskService::new(file.path());
+
+        let contexts = service.get_all_contexts().unwrap();
+        assert!(contexts.is_empty());
+    }
+
+    #[test]
+    fn test_tasks_maintain_line_numbers() {
+        let file = create_temp_todo_file("Task 1\nTask 2\nTask 3\n");
+        let service = TaskService::new(file.path());
+
+        let tasks = service.load_tasks().unwrap();
+        assert_eq!(tasks.len(), 3);
+        assert_eq!(tasks[0].id, 1);
+        assert_eq!(tasks[1].id, 2);
+        assert_eq!(tasks[2].id, 3);
+    }
+
+    #[test]
+    fn test_tasks_with_special_characters() {
+        let file = create_temp_todo_file("Task with (parentheses) +project @context\n");
+        let service = TaskService::new(file.path());
+
+        let tasks = service.load_tasks().unwrap();
+        assert_eq!(tasks.len(), 1);
+        assert!(tasks[0].subject.contains("parentheses"));
+        assert_eq!(tasks[0].projects, vec!["project"]);
+        assert_eq!(tasks[0].contexts, vec!["context"]);
     }
 }

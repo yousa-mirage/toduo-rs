@@ -191,16 +191,16 @@ impl TaskInput {
             return Err("Description cannot be empty".to_string());
         }
 
-        if let Some(p) = self.priority {
-            if !p.is_ascii_uppercase() {
-                return Err("Priority must be A-Z".to_string());
-            }
+        if let Some(p) = self.priority
+            && !p.is_ascii_uppercase()
+        {
+            return Err("Priority must be A-Z".to_string());
         }
 
-        if let Some(ref due) = self.due_date {
-            if NaiveDate::parse_from_str(due, "%Y-%m-%d").is_err() {
-                return Err("Due date must be in YYYY-MM-DD format".to_string());
-            }
+        if let Some(ref due) = self.due_date
+            && NaiveDate::parse_from_str(due, "%Y-%m-%d").is_err()
+        {
+            return Err("Due date must be in YYYY-MM-DD format".to_string());
         }
 
         Ok(())
@@ -216,12 +216,11 @@ impl PriorityExt for Priority {
     fn get_value(&self) -> u8 {
         // Priority displays as (A), (B), etc. We need to extract the letter offset
         let s = self.to_string();
-        if s.len() == 1 {
-            if let Some(c) = s.chars().next() {
-                if c.is_ascii_uppercase() {
-                    return c as u8 - b'A';
-                }
-            }
+        if s.len() == 1
+            && let Some(c) = s.chars().next()
+            && c.is_ascii_uppercase()
+        {
+            return c as u8 - b'A';
         }
         26 // lowest priority
     }
@@ -383,5 +382,101 @@ mod tests {
         assert!(result.contains("@home"));
         assert!(result.contains("@work"));
         assert!(result.contains("due:2026-02-01"));
+    }
+
+    #[test]
+    fn test_due_status_invalid_date_format() {
+        assert_eq!(
+            DueStatus::from_due_date(Some("2026-13-45")),
+            DueStatus::None
+        );
+        assert_eq!(
+            DueStatus::from_due_date(Some("not-a-date")),
+            DueStatus::None
+        );
+        assert_eq!(
+            DueStatus::from_due_date(Some("2026/01/15")),
+            DueStatus::None
+        );
+    }
+
+    #[test]
+    fn test_task_input_due_date_validation() {
+        let valid_input = TaskInput {
+            description: "Task with valid due date".to_string(),
+            priority: None,
+            projects: vec![],
+            contexts: vec![],
+            due_date: Some("2026-12-31".to_string()),
+        };
+        assert!(valid_input.validate().is_ok());
+
+        let invalid_date = TaskInput {
+            description: "Task".to_string(),
+            priority: None,
+            projects: vec![],
+            contexts: vec![],
+            due_date: Some("invalid-date".to_string()),
+        };
+        assert!(invalid_date.validate().is_err());
+
+        let wrong_format = TaskInput {
+            description: "Task".to_string(),
+            priority: None,
+            projects: vec![],
+            contexts: vec![],
+            due_date: Some("12/31/2026".to_string()),
+        };
+        assert!(wrong_format.validate().is_err());
+    }
+
+    #[test]
+    fn test_app_task_completed_task() {
+        use std::str::FromStr;
+        let raw = "x 2026-01-10 2026-01-08 Completed task +project @context";
+        let parsed = RawTask::from_str(raw).unwrap();
+        let app_task = AppTask::from_raw(1, raw.to_string(), parsed);
+
+        assert!(app_task.completed);
+        assert!(app_task.finish_date.is_some());
+        assert_eq!(app_task.projects, vec!["project"]);
+        assert_eq!(app_task.contexts, vec!["context"]);
+    }
+
+    #[test]
+    fn test_app_task_no_priority() {
+        use std::str::FromStr;
+        let raw = "2026-01-10 Task without priority +project";
+        let parsed = RawTask::from_str(raw).unwrap();
+        let app_task = AppTask::from_raw(1, raw.to_string(), parsed);
+
+        assert!(app_task.priority.is_none());
+        assert!(!app_task.completed);
+        assert_eq!(app_task.projects, vec!["project"]);
+    }
+
+    #[test]
+    fn test_task_input_priority_z() {
+        let input = TaskInput {
+            description: "Low priority task".to_string(),
+            priority: Some('Z'),
+            projects: vec![],
+            contexts: vec![],
+            due_date: None,
+        };
+
+        let result = input.to_todo_txt();
+        assert!(result.contains("(Z)"));
+    }
+
+    #[test]
+    fn test_due_status_7_days_boundary() {
+        let today = chrono::Local::now().date_naive();
+        let exactly_7_days = today + chrono::Duration::days(7);
+
+        assert_eq!(
+            DueStatus::from_due_date(Some(&exactly_7_days.format("%Y-%m-%d").to_string())),
+            DueStatus::Soon
+        );
     }
 }
