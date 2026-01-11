@@ -265,10 +265,7 @@ mod tests {
             d.format("%Y-%m-%d").to_string()
         };
 
-        assert_eq!(
-            DueStatus::from_due_date(Some(&yesterday)),
-            DueStatus::Overdue
-        );
+        assert_eq!(DueStatus::from_due_date(Some(&yesterday)), DueStatus::Overdue);
         assert_eq!(DueStatus::from_due_date(Some(&today)), DueStatus::Today);
         assert_eq!(DueStatus::from_due_date(Some(&tomorrow)), DueStatus::Soon);
         assert_eq!(DueStatus::from_due_date(Some(&next_week)), DueStatus::Later);
@@ -386,18 +383,9 @@ mod tests {
 
     #[test]
     fn test_due_status_invalid_date_format() {
-        assert_eq!(
-            DueStatus::from_due_date(Some("2026-13-45")),
-            DueStatus::None
-        );
-        assert_eq!(
-            DueStatus::from_due_date(Some("not-a-date")),
-            DueStatus::None
-        );
-        assert_eq!(
-            DueStatus::from_due_date(Some("2026/01/15")),
-            DueStatus::None
-        );
+        assert_eq!(DueStatus::from_due_date(Some("2026-13-45")), DueStatus::None);
+        assert_eq!(DueStatus::from_due_date(Some("not-a-date")), DueStatus::None);
+        assert_eq!(DueStatus::from_due_date(Some("2026/01/15")), DueStatus::None);
     }
 
     #[test]

@@ -11,9 +11,7 @@ mod error;
 mod model;
 mod service;
 
-pub use config::{
-    AppConfig, GuiConfig, get_todo_path, load_config, save_gui_config, save_todo_path,
-};
+pub use config::{AppConfig, GuiConfig, get_todo_path, load_config, save_gui_config, save_todo_path};
 pub use error::TodoError;
 pub use model::{AppTask, DueStatus, TaskInput};
 pub use service::TaskService;

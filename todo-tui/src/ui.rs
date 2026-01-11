@@ -36,11 +36,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
 fn draw_title(f: &mut Frame, area: Rect) {
     let title = Paragraph::new("Todo.txt Manager")
-        .style(
-            Style::default()
-                .fg(TEXT_HIGHLIGHT)
-                .add_modifier(Modifier::BOLD),
-        )
+        .style(Style::default().fg(TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD))
         .block(
             Block::default()
                 .borders(Borders::ALL)
@@ -94,10 +90,7 @@ fn draw_task_list(f: &mut Frame, app: &mut App, area: Rect) {
 
             // Projects
             for proj in &task.projects {
-                spans.push(Span::styled(
-                    format!(" +{}", proj),
-                    Style::default().fg(PROJECT),
-                ));
+                spans.push(Span::styled(format!(" +{}", proj), Style::default().fg(PROJECT)));
             }
 
             // Contexts
