@@ -196,7 +196,7 @@ const groupedTasks = computed(() => {
               <!-- Custom Radio-style Checkbox -->
               <div
                 class="checkbox-wrapper"
-                @click="emit('toggle-complete', task)"
+                @click.stop="emit('toggle-complete', task)"
               >
                 <div
                   class="custom-checkbox"
@@ -404,10 +404,12 @@ const groupedTasks = computed(() => {
 }
 
 /* TransitionGroup Animations */
-.task-row-move {
+.task-row-move,
+.task-row.task-row-move {
   transition:
     transform 0.35s ease,
-    opacity 0.35s ease;
+    opacity 0.35s ease,
+    background-color 0.35s ease;
 }
 
 .task-row-enter-active,
