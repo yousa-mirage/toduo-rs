@@ -17,5 +17,5 @@ pub use model::{AppTask, DueStatus, TaskInput};
 pub use service::TaskService;
 
 // Re-export commonly used types from todo-txt
-pub use todo_txt::task::Simple as RawTask;
 pub use todo_txt::Priority;
+pub use todo_txt::task::Simple as RawTask;

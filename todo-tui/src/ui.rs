@@ -1,11 +1,11 @@
 //! UI rendering for the TUI
 
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
-    Frame,
 };
 
 use crate::app::{App, InputField, InputMode};

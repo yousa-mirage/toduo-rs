@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 
-use todo_core::{get_todo_path, save_todo_path, AppTask, TaskInput, TaskService};
+use todo_core::{AppTask, TaskInput, TaskService, get_todo_path, save_todo_path};
 
 /// Input mode for the application
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

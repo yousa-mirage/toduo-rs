@@ -3,7 +3,7 @@ name = "todo-gui"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -24,7 +24,7 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 todo-core = { version = "0.1.0", path = "../../todo-core" }
-dirs = "5"
+dirs = "6"
 clipboard-win = "5"
 
 [lints]

@@ -2,8 +2,8 @@
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
-use todo_txt::task::Simple as RawTask;
 use todo_txt::Priority;
+use todo_txt::task::Simple as RawTask;
 
 /// Due date status for UI display
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

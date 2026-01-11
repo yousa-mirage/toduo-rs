@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
-use todo_core::{save_todo_path, AppTask, DueStatus, TaskInput, TaskService};
+use todo_core::{AppTask, DueStatus, TaskInput, TaskService, save_todo_path};
 
 /// Application state managed by Tauri
 pub struct AppState {
@@ -182,8 +182,8 @@ fn get_todo_path(state: State<AppState>) -> String {
 /// Write text to clipboard
 #[tauri::command]
 fn write_text_to_clipboard(text: String) -> Result<(), String> {
-    use clipboard_win::set;
     use clipboard_win::Unicode;
+    use clipboard_win::set;
     set(Unicode, text).map_err(|e| format!("Failed to write to clipboard: {}", e))
 }
 
