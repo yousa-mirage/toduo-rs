@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 // Types
 interface Task {
@@ -27,15 +27,32 @@ const emit = defineEmits<{
   (e: "open-settings"): void;
 }>();
 
-// State
-const isCollapsed = ref(false);
-const sidebarWidth = ref(250);
-const isResizing = ref(false);
-
 // Constants
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 450;
 const COLLAPSED_WIDTH = 70;
+
+// State
+const savedCollapsed = localStorage.getItem("sidebar-collapsed");
+const isCollapsed = ref(savedCollapsed === "true");
+
+const savedWidth = localStorage.getItem("sidebar-width");
+const initialWidth = savedWidth ? parseInt(savedWidth, 10) : 250;
+// Validate loaded width
+const sidebarWidth = ref(
+  initialWidth >= MIN_WIDTH && initialWidth <= MAX_WIDTH ? initialWidth : 250,
+);
+
+const isResizing = ref(false);
+
+// Persistence
+watch(isCollapsed, (newVal) => {
+  localStorage.setItem("sidebar-collapsed", String(newVal));
+});
+
+watch(sidebarWidth, (newVal) => {
+  localStorage.setItem("sidebar-width", String(newVal));
+});
 
 // Helper to count tasks
 const counts = computed(() => {
