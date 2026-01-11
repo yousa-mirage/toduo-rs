@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow.workspace = true
+chrono.workspace = true
 crossterm.workspace = true
 dirs.workspace = true
 ratatui.workspace = true

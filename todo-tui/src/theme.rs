@@ -60,6 +60,7 @@ pub use polar_night::NORD1 as BG_LIGHT;
 pub use polar_night::NORD2 as SELECTION;
 pub use polar_night::NORD3 as BORDER;
 
+pub use polar_night::NORD3 as TEXT_DIM;
 pub use snow_storm::NORD4 as TEXT;
 pub use snow_storm::NORD6 as TEXT_HIGHLIGHT;
 
