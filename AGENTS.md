@@ -47,45 +47,60 @@ bun run tauri dev
 # Run all tests
 cargo test
 
-# Run specific test
-cargo test -p todo-core <test_name>
-cargo test -p todo-tui <test_name>
+# Run specific test (exact name)
+cargo test -p todo-core test_load_tasks
+cargo test -p todo-tui test_add_task
 
-# Run with output
+# Run with output (for debugging)
 cargo test -p todo-core -- --nocapture
 
 # Test specific module
-cargo test -p todo-core lib::<module_name>
+cargo test -p todo-core lib::config
+cargo test -p todo-core lib::model::tests
+
+# Run doc tests
+cargo test --doc
 ```
 
-## Code Style
-
-**In each session, when you have finished making your changes, you must run :**
+### Linting & Formatting
 
 ```bash
+# Format all code
 cargo fmt --all
+
+# Clippy check (strict -D warnings)
 cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+# GUI linting
 cd todo-gui
 bun run format
 bun run type-check || bun x vue-tsc --noEmit
 bun run lint
-cd ../
 ```
 
-Make sure the code format is consistent and there are no errors or warnings in the code. If there are any, continue to fix them.
+## Code Style
+
+**Before committing, always run:**
+
+```bash
+cargo fmt --all
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cd todo-gui && bun run format && bun run type-check && bun run lint
+```
 
 ### Rust Conventions
 
-**Imports**: Use `use` statements with grouping. Prefer absolute paths for workspace dependencies.
+**Imports**: Group by category. Use absolute paths for workspace deps.
 
 ```rust
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 
 use crate::model::Task;
+use crate::error::TodoError;
 ```
 
-**Naming**: Snake_case for variables/functions, PascalCase for types/traits, UPPER_SCASE for constants.
+**Naming**: `snake_case` for vars/functions, `PascalCase` for types/traits, `UPPER_SNAKE_CASE` for consts.
 
 ```rust
 const MAX_TASK_LENGTH: usize = 500;
@@ -95,17 +110,39 @@ pub struct TaskService { ... }
 fn load_tasks(path: &Path) -> Result<Vec<Task>> { ... }
 ```
 
-**Error Handling**: Use `anyhow` for application errors with context. Use `thiserror` for library errors.
+**Error Handling**: Use `anyhow` with `.with_context()` for app errors. Use `thiserror` for library errors.
 
 ```rust
+// Application error with context
 fn load_tasks(path: &Path) -> Result<Vec<Task>> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read {}", path.display()))?;
     Ok(parse_tasks(&content)?)
 }
+
+// Library error with thiserror
+#[derive(Error, Debug)]
+pub enum TodoError {
+    #[error("Task not found: {0}")]
+    TaskNotFound(usize),
+}
 ```
 
-**Formatting**: Run `cargo fmt` before committing. Use default Rust 2021 edition settings.
+**Avoid**: `unwrap()`, `expect()`, `panic!`, `unwrap_err()`, `unwrap_ok()`. Use `?` or proper error mapping.
+
+**Early Returns**: Use guard clauses. Return `None`/`Err` early when possible.
+
+```rust
+pub fn from_due_date(due_date: Option<&str>) -> DueStatus {
+    let Some(due_str) = due_date else { return DueStatus::None };
+    let Ok(due) = NaiveDate::parse_from_str(due_str, "%Y-%m-%d") else {
+        return DueStatus::None;
+    };
+    // ... rest of logic
+}
+```
+
+**Option/Result**: Prefer `if let Some(x) = ...` or `let Some(x) = ... else { return ... }` over nested matches.
 
 ### Vue 3 + TypeScript
 
@@ -116,7 +153,6 @@ fn load_tasks(path: &Path) -> Result<Vec<Task>> {
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
-// Props/Emits
 defineProps<{ tasks: Task[] }>();
 defineEmits<{ (e: "update", task: Task): void }>();
 </script>
@@ -130,7 +166,7 @@ defineEmits<{ (e: "update", task: Task): void }>();
 </style>
 ```
 
-**Styling**: Native CSS only. No Tailwind, no Bootstrap. Use CSS variables for theming.
+**Styling**: Native CSS only. No Tailwind. Use CSS variables for theming.
 
 ## Project Structure
 
@@ -140,10 +176,11 @@ defineEmits<{ (e: "update", task: Task): void }>();
 
 ## Key Technologies
 
-- Rust 2021 edition, Tauri 2, Vue 3 Composition API
+- Rust 2024 edition, Tauri 2, Vue 3 Composition API
 - Package manager: Bun (always use for GUI)
-- Todo.txt format strictly followed via `todo-txt` crate
-- File locking via `fs2` for atomic writes
+- Todo.txt format via `todo-txt` crate
+- `anyhow` for errors, `thiserror` for library errors
+- `toml` for config, `serde` for serialization
 
 ## Communication Patterns
 

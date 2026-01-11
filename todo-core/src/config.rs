@@ -3,7 +3,7 @@
 //! Stores and retrieves the last used todo.txt path in a config file.
 
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -29,11 +29,10 @@ pub struct AppConfig {
 
 /// Get the config directory (~/.todo)
 pub fn get_config_dir() -> Result<PathBuf> {
-    let home_dir =
-        dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
-    let config_dir = home_dir.join(".todo");
+    let config_dir = dirs::home_dir()
+        .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
+        .join(".todo");
 
-    // Ensure the directory exists
     fs::create_dir_all(&config_dir)
         .with_context(|| format!("Failed to create config directory: {:?}", config_dir))?;
 
@@ -42,8 +41,7 @@ pub fn get_config_dir() -> Result<PathBuf> {
 
 /// Get the config file path
 pub fn get_config_path() -> Result<PathBuf> {
-    let config_dir = get_config_dir()?;
-    Ok(config_dir.join(CONFIG_FILE_NAME))
+    Ok(get_config_dir()?.join(CONFIG_FILE_NAME))
 }
 
 /// Load the full configuration
@@ -54,36 +52,25 @@ pub fn load_config() -> Result<AppConfig> {
         return Ok(AppConfig::default());
     }
 
-    let mut content = String::new();
-    File::open(&config_path)
-        .with_context(|| format!("Failed to open config file: {:?}", config_path))?
-        .read_to_string(&mut content)
-        .with_context(|| "Failed to read config file")?;
+    let content = fs::read_to_string(&config_path)
+        .with_context(|| format!("Failed to read config file: {:?}", config_path))?;
 
-    let config: AppConfig = toml::from_str(&content).with_context(|| "Failed to parse config file")?;
-
-    Ok(config)
+    toml::from_str(&content).with_context(|| "Failed to parse config file")
 }
 
 /// Save the full configuration
 pub fn save_config(config: &AppConfig) -> Result<()> {
     let config_path = get_config_path()?;
+    let toml_content = toml::to_string_pretty(config)?;
 
-    let toml_content = toml::to_string_pretty(config).with_context(|| "Failed to serialize config")?;
-
-    let mut file = File::create(&config_path)
-        .with_context(|| format!("Failed to create config file: {:?}", config_path))?;
-
-    file.write_all(toml_content.as_bytes())
-        .with_context(|| "Failed to write config file")?;
+    File::create(&config_path)?.write_all(toml_content.as_bytes())?;
 
     Ok(())
 }
 
 /// Load the saved todo path from config
 pub fn load_saved_todo_path() -> Result<Option<PathBuf>> {
-    let config = load_config()?;
-    Ok(config.todo_path.map(PathBuf::from))
+    Ok(load_config()?.todo_path.map(PathBuf::from))
 }
 
 /// Save the todo path to config
@@ -102,13 +89,10 @@ pub fn save_gui_config(gui_config: GuiConfig) -> Result<()> {
 
 /// Get the default todo.txt path (~/.todo/todo.txt)
 pub fn get_default_todo_path() -> Result<PathBuf> {
-    let config_dir = get_config_dir()?;
-    let todo_path = config_dir.join("todo.txt");
+    let todo_path = get_config_dir()?.join("todo.txt");
 
-    // Create empty file if it doesn't exist
     if !todo_path.exists() {
-        File::create(&todo_path)
-            .with_context(|| format!("Failed to create todo.txt: {:?}", todo_path))?;
+        File::create(&todo_path)?;
     }
 
     Ok(todo_path)
@@ -116,16 +100,11 @@ pub fn get_default_todo_path() -> Result<PathBuf> {
 
 /// Get the todo path to use, preferring saved path over default
 pub fn get_todo_path() -> Result<PathBuf> {
-    // First try to load saved path
-    if let Some(saved_path) = load_saved_todo_path()? {
-        // Ensure the file exists
-        if saved_path.exists() {
-            return Ok(saved_path);
-        }
+    if let Some(path) = load_saved_todo_path()?.filter(|p| p.exists()) {
+        Ok(path)
+    } else {
+        get_default_todo_path()
     }
-
-    // Fall back to default path
-    get_default_todo_path()
 }
 
 #[cfg(test)]

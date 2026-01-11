@@ -26,26 +26,21 @@ impl TaskService {
     pub fn new<P: AsRef<Path>>(todo_path: P) -> Self {
         let todo_path = todo_path.as_ref().to_path_buf();
         let done_path = todo_path.with_file_name("done.txt");
-
         Self { todo_path, done_path }
     }
 
     /// Create a TaskService using the default config directory
     pub fn with_default_path() -> Result<Self> {
-        let home_dir =
-            dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?;
-        let todo_dir = home_dir.join(".todo");
+        let todo_path = dirs::home_dir()
+            .ok_or_else(|| anyhow::anyhow!("Could not determine home directory"))?
+            .join(".todo")
+            .join("todo.txt");
 
-        // Ensure the directory exists
-        fs::create_dir_all(&todo_dir)
-            .with_context(|| format!("Failed to create todo directory: {:?}", todo_dir))?;
-
-        let todo_path = todo_dir.join("todo.txt");
-
-        // Create empty file if it doesn't exist
+        if let Some(parent) = todo_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
         if !todo_path.exists() {
-            File::create(&todo_path)
-                .with_context(|| format!("Failed to create todo.txt: {:?}", todo_path))?;
+            File::create(&todo_path)?;
         }
 
         Ok(Self::new(todo_path))
@@ -97,7 +92,6 @@ impl TaskService {
         input.validate().map_err(TodoError::InvalidInput)?;
 
         let todo_txt_line = input.to_todo_txt();
-
         let raw_task = RawTask::from_str(&todo_txt_line).map_err(|_| TodoError::ParseError {
             line: 0,
             message: "Failed to parse generated task".to_string(),
@@ -117,53 +111,42 @@ impl TaskService {
 
     /// Mark a task as complete by ID
     pub fn complete_task(&self, id: usize) -> Result<AppTask> {
-        let mut tasks = self.load_tasks()?;
-
-        let task = tasks
-            .iter_mut()
-            .find(|t| t.id == id)
-            .ok_or(TodoError::TaskNotFound(id))?;
-
-        // Update the parsed task
-        task.parsed.complete();
-        task.completed = true;
-        task.finish_date = Some(Local::now().format("%Y-%m-%d").to_string());
-        task.raw_content = task.parsed.to_string();
-
-        // Save all tasks back to file
-        self.save_tasks(&tasks)?;
-
-        // Return the updated task
-        let updated_task = tasks
-            .into_iter()
-            .find(|t| t.id == id)
-            .ok_or(TodoError::TaskNotFound(id))?;
-        Ok(updated_task)
+        self.modify_task(id, |task| {
+            task.parsed.complete();
+            task.completed = true;
+            task.finish_date = Some(Local::now().format("%Y-%m-%d").to_string());
+        })
     }
 
     /// Uncomplete a task by ID
     pub fn uncomplete_task(&self, id: usize) -> Result<AppTask> {
-        let mut tasks = self.load_tasks()?;
+        self.modify_task(id, |task| {
+            task.parsed.uncomplete();
+            task.completed = false;
+            task.finish_date = None;
+        })
+    }
 
+    /// Modify a task by ID with a closure
+    fn modify_task<F>(&self, id: usize, modifier: F) -> Result<AppTask>
+    where
+        F: FnOnce(&mut AppTask),
+    {
+        let mut tasks = self.load_tasks()?;
         let task = tasks
             .iter_mut()
             .find(|t| t.id == id)
             .ok_or(TodoError::TaskNotFound(id))?;
 
-        // Update the parsed task
-        task.parsed.uncomplete();
-        task.completed = false;
-        task.finish_date = None;
+        modifier(task);
         task.raw_content = task.parsed.to_string();
 
-        // Save all tasks back to file
         self.save_tasks(&tasks)?;
 
-        let updated_task = tasks
+        tasks
             .into_iter()
             .find(|t| t.id == id)
-            .ok_or(TodoError::TaskNotFound(id))?;
-        Ok(updated_task)
+            .ok_or_else(|| TodoError::TaskNotFound(id).into())
     }
 
     /// Update a task's priority
@@ -174,96 +157,70 @@ impl TaskService {
             return Err(TodoError::InvalidInput("Priority must be A-Z".to_string()).into());
         }
 
-        let mut tasks = self.load_tasks()?;
-
-        let task = tasks
-            .iter_mut()
-            .find(|t| t.id == id)
-            .ok_or(TodoError::TaskNotFound(id))?;
-
-        task.parsed.priority = match priority {
-            Some(c) => todo_txt::Priority::from(c as u8 - b'A'),
-            None => todo_txt::Priority::lowest(),
-        };
-        task.priority = priority;
-        task.raw_content = task.parsed.to_string();
-
-        self.save_tasks(&tasks)?;
-
-        let updated_task = tasks
-            .into_iter()
-            .find(|t| t.id == id)
-            .ok_or(TodoError::TaskNotFound(id))?;
-        Ok(updated_task)
+        self.modify_task(id, |task| {
+            task.parsed.priority = priority
+                .map(|c| todo_txt::Priority::from(c as u8 - b'A'))
+                .unwrap_or_else(todo_txt::Priority::lowest);
+            task.priority = priority;
+        })
     }
 
     /// Delete a task by ID
     pub fn delete_task(&self, id: usize) -> Result<()> {
         let tasks = self.load_tasks()?;
 
-        if !tasks.iter().any(|t| t.id == id) {
+        let Some(_) = tasks.iter().find(|t| t.id == id) else {
             return Err(TodoError::TaskNotFound(id).into());
-        }
+        };
 
         let remaining: Vec<_> = tasks.into_iter().filter(|t| t.id != id).collect();
-        self.save_tasks(&remaining)?;
-
-        Ok(())
+        self.save_tasks(&remaining)
     }
 
     /// Update a task with new content
     pub fn update_task(&self, id: usize, input: TaskInput) -> Result<AppTask> {
         input.validate().map_err(TodoError::InvalidInput)?;
 
-        let mut tasks = self.load_tasks()?;
-
-        let task = tasks
-            .iter_mut()
-            .find(|t| t.id == id)
-            .ok_or(TodoError::TaskNotFound(id))?;
-
-        // Generate new todo.txt line from input
         let todo_txt_line = input.to_todo_txt();
-
-        // Parse and replace
         let raw_task = RawTask::from_str(&todo_txt_line).map_err(|_| TodoError::ParseError {
             line: id,
             message: "Failed to parse updated task".to_string(),
         })?;
 
-        task.parsed = raw_task;
-        task.raw_content = todo_txt_line.clone();
-        task.subject = input.description;
-        task.priority = input.priority;
-        task.projects = input.projects;
-        task.contexts = input.contexts;
-        task.due_date = input.due_date;
+        let description = input.description.clone();
+        let priority = input.priority;
+        let projects = input.projects.clone();
+        let contexts = input.contexts.clone();
+        let due_date = input.due_date.clone();
 
-        self.save_tasks(&tasks)?;
-
-        let updated_task = tasks
-            .into_iter()
-            .find(|t| t.id == id)
-            .ok_or(TodoError::TaskNotFound(id))?;
-        Ok(updated_task)
+        self.modify_task(id, move |task| {
+            task.parsed = raw_task;
+            task.raw_content = todo_txt_line;
+            task.subject = description;
+            task.priority = priority;
+            task.projects = projects;
+            task.contexts = contexts;
+            task.due_date = due_date;
+        })
     }
 
     /// Save tasks to the todo.txt file (overwrites entire file)
     fn save_tasks(&self, tasks: &[AppTask]) -> Result<()> {
-        let file = OpenOptions::new()
+        let content = tasks
+            .iter()
+            .map(|t| t.parsed.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let mut file = OpenOptions::new()
             .write(true)
             .truncate(true)
             .create(true)
             .open(&self.todo_path)
             .with_context(|| format!("Failed to open {:?} for writing", self.todo_path))?;
 
-        let mut writer = std::io::BufWriter::new(&file);
-
-        for task in tasks {
-            writeln!(writer, "{}", task.parsed).with_context(|| "Failed to write task")?;
-        }
-
-        writer.flush()?;
+        file.write_all(content.as_bytes())?;
+        file.write_all(b"\n")?;
 
         Ok(())
     }
@@ -280,24 +237,26 @@ impl TaskService {
         Ok(content.lines().filter(|l| !l.trim().is_empty()).count())
     }
 
+    /// Extract all unique tags of a given type from tasks
+    fn extract_tags<F>(&self, extractor: F) -> Result<Vec<String>>
+    where
+        F: Fn(&AppTask) -> &[String],
+    {
+        let tasks = self.load_tasks()?;
+        let mut tags: Vec<_> = tasks.iter().flat_map(extractor).cloned().collect();
+        tags.sort_unstable();
+        tags.dedup();
+        Ok(tags)
+    }
+
     /// Get all unique projects from current tasks
     pub fn get_all_projects(&self) -> Result<Vec<String>> {
-        let tasks = self.load_tasks()?;
-        let mut projects: Vec<String> = tasks.iter().flat_map(|t| t.projects.clone()).collect();
-
-        projects.sort();
-        projects.dedup();
-        Ok(projects)
+        self.extract_tags(|t| &t.projects)
     }
 
     /// Get all unique contexts from current tasks
     pub fn get_all_contexts(&self) -> Result<Vec<String>> {
-        let tasks = self.load_tasks()?;
-        let mut contexts: Vec<String> = tasks.iter().flat_map(|t| t.contexts.clone()).collect();
-
-        contexts.sort();
-        contexts.dedup();
-        Ok(contexts)
+        self.extract_tags(|t| &t.contexts)
     }
 }
 

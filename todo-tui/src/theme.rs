@@ -32,8 +32,6 @@ pub mod snow_storm {
 pub mod frost {
     use super::*;
 
-    /// Frozen polar water
-    pub const NORD7: Color = Color::Rgb(143, 188, 187);
     /// Pure ice
     pub const NORD8: Color = Color::Rgb(136, 192, 208);
 }

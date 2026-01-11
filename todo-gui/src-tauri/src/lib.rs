@@ -2,11 +2,13 @@
 //!
 //! Provides Tauri commands to interact with todo-core
 
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
+
+use serde::{Deserialize, Serialize};
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
+
 use todo_core::{
     AppTask, DueStatus, GuiConfig, TaskInput, TaskService, load_config, save_gui_config, save_todo_path,
 };
@@ -199,31 +201,29 @@ async fn select_todo_directory(state: State<'_, AppState>, app: tauri::Window) -
 
     let path = rx.recv_timeout(std::time::Duration::from_secs(60));
 
-    if let Ok(Some(path)) = path {
-        let path_buf = path
-            .as_path()
-            .ok_or_else(|| String::from("Invalid path"))?
-            .to_path_buf();
-        let todo_path = path_buf.join("todo.txt");
+    let Some(path) = path.ok().flatten() else {
+        return Ok(false);
+    };
+    let path_buf = path
+        .as_path()
+        .ok_or_else(|| "Invalid path".to_string())?
+        .to_path_buf();
+    let todo_path = path_buf.join("todo.txt");
 
-        if !todo_path.exists() {
-            std::fs::File::create(&todo_path)
-                .map_err(|e| format!("Failed to create todo.txt: {}", e))?;
-        }
-
-        save_todo_path(&todo_path).map_err(|e| format!("Failed to save todo path: {}", e))?;
-
-        let mut state_guard = state.service.lock().map_err(|e| e.to_string())?;
-        *state_guard = Some(TaskService::new(&todo_path));
-
-        drop(state_guard);
-        let mut path_guard = state.todo_path.lock().map_err(|e| e.to_string())?;
-        *path_guard = todo_path.clone();
-
-        return Ok(true);
+    if !todo_path.exists() {
+        std::fs::File::create(&todo_path).map_err(|e| format!("Failed to create todo.txt: {}", e))?;
     }
 
-    Ok(false)
+    save_todo_path(&todo_path).map_err(|e| format!("Failed to save todo path: {}", e))?;
+
+    let mut state_guard = state.service.lock().map_err(|e| e.to_string())?;
+    *state_guard = Some(TaskService::new(&todo_path));
+
+    drop(state_guard);
+    let mut path_guard = state.todo_path.lock().map_err(|e| e.to_string())?;
+    *path_guard = todo_path;
+
+    Ok(true)
 }
 
 /// Initialize todo service with the given directory
@@ -239,8 +239,8 @@ fn init_todo_directory(state: State<AppState>, directory: String) -> Result<(), 
     save_todo_path(&todo_path).map_err(|e| format!("Failed to save todo path: {}", e))?;
 
     let service = TaskService::new(&todo_path);
-    let mut svc = state.service.lock().map_err(|e| e.to_string())?;
-    *svc = Some(service);
+    let mut state_guard = state.service.lock().map_err(|e| e.to_string())?;
+    *state_guard = Some(service);
 
     Ok(())
 }
@@ -265,12 +265,13 @@ fn update_gui_config(config: GuiConfig) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Use saved path if available, otherwise use default (~/.todo/todo.txt)
-    let todo_path = todo_core::get_todo_path().unwrap_or_else(|_| {
-        dirs::home_dir()
+    let todo_path = match todo_core::get_todo_path() {
+        Ok(path) => path,
+        Err(_) => dirs::home_dir()
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
             .join(".todo")
-            .join("todo.txt")
-    });
+            .join("todo.txt"),
+    };
 
     if let Some(parent) = todo_path.parent() {
         std::fs::create_dir_all(parent).ok();

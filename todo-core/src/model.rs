@@ -23,31 +23,26 @@ pub enum DueStatus {
 impl DueStatus {
     /// Calculate DueStatus from a due date string (YYYY-MM-DD format)
     pub fn from_due_date(due_date: Option<&str>) -> Self {
-        let due_date = match due_date {
-            Some(d) => d,
-            None => return Self::None,
+        let Some(due_str) = due_date else {
+            return Self::None;
+        };
+        let Ok(due) = NaiveDate::parse_from_str(due_str, "%Y-%m-%d") else {
+            return Self::None;
         };
 
-        // Parse the due date
-        let due = match NaiveDate::parse_from_str(due_date, "%Y-%m-%d") {
-            Ok(d) => d,
-            Err(_) => return Self::None,
-        };
-
-        // Get today's date (local time)
         let today = chrono::Local::now().date_naive();
-
-        // Calculate dates for comparison
         let next_7_days = today + chrono::Duration::days(7);
 
-        if due < today {
-            Self::Overdue
-        } else if due == today {
-            Self::Today
-        } else if due <= next_7_days {
-            Self::Soon
-        } else {
-            Self::Later
+        match due.cmp(&today) {
+            std::cmp::Ordering::Less => Self::Overdue,
+            std::cmp::Ordering::Equal => Self::Today,
+            std::cmp::Ordering::Greater => {
+                if due <= next_7_days {
+                    Self::Soon
+                } else {
+                    Self::Later
+                }
+            }
         }
     }
 }
@@ -89,40 +84,33 @@ pub struct AppTask {
 impl AppTask {
     /// Create an AppTask from a raw task and its line number
     pub fn from_raw(id: usize, raw_content: String, parsed: RawTask) -> Self {
+        let format_naive_date = |d: NaiveDate| d.format("%Y-%m-%d").to_string();
+
         let subject = parsed.subject.clone();
-        let priority = if parsed.priority.is_lowest() {
-            None
-        } else {
-            Some((b'A' + parsed.priority.get_value()) as char)
-        };
-        let completed = parsed.finished;
-        let create_date = parsed.create_date.map(|d| d.format("%Y-%m-%d").to_string());
-        let finish_date = parsed.finish_date.map(|d| d.format("%Y-%m-%d").to_string());
-        let due_date = parsed.due_date.map(|d| d.format("%Y-%m-%d").to_string());
-        let due_status = DueStatus::from_due_date(due_date.as_deref());
-        let projects = parsed.projects.clone();
-        let contexts = parsed.contexts.clone();
+        let priority =
+            (!parsed.priority.is_lowest()).then(|| (b'A' + parsed.priority.get_value()) as char);
 
         let clean_subject = subject
-            .replace(['\r', '\n'], "")
             .split_whitespace()
             .filter(|word| !word.starts_with('@') && !word.starts_with('+'))
             .collect::<Vec<_>>()
             .join(" ");
 
+        let due_date_str = parsed.due_date.as_ref().map(|d| d.format("%Y-%m-%d").to_string());
+
         Self {
             id,
             raw_content,
-            parsed,
+            parsed: parsed.clone(),
             subject: clean_subject,
             priority,
-            completed,
-            create_date,
-            finish_date,
-            due_date,
-            due_status,
-            projects,
-            contexts,
+            completed: parsed.finished,
+            create_date: parsed.create_date.map(format_naive_date),
+            finish_date: parsed.finish_date.map(format_naive_date),
+            due_date: due_date_str.clone(),
+            due_status: DueStatus::from_due_date(due_date_str.as_deref()),
+            projects: parsed.projects.clone(),
+            contexts: parsed.contexts.clone(),
         }
     }
 
@@ -153,36 +141,27 @@ pub struct TaskInput {
 impl TaskInput {
     /// Build a todo.txt format string from the input
     pub fn to_todo_txt(&self) -> String {
-        let mut parts = Vec::new();
-
-        // Priority
-        if let Some(p) = self.priority {
-            parts.push(format!("({}) ", p.to_ascii_uppercase()));
-        }
-
-        // Creation date (today)
         let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-        parts.push(format!("{} ", today));
+        let priority = self
+            .priority
+            .as_ref()
+            .map_or(String::new(), |p| format!("({}) ", p.to_ascii_uppercase()));
+        let projects: String = self.projects.iter().map(|p| format!(" +{}", p)).collect();
+        let contexts: String = self.contexts.iter().map(|c| format!(" @{}", c)).collect();
+        let due = self
+            .due_date
+            .as_ref()
+            .map_or(String::new(), |d| format!(" due:{}", d));
 
-        // Description
-        parts.push(self.description.clone());
-
-        // Projects
-        for proj in &self.projects {
-            parts.push(format!(" +{}", proj));
-        }
-
-        // Contexts
-        for ctx in &self.contexts {
-            parts.push(format!(" @{}", ctx));
-        }
-
-        // Due date
-        if let Some(ref due) = self.due_date {
-            parts.push(format!(" due:{}", due));
-        }
-
-        parts.concat()
+        [
+            priority,
+            format!("{} ", today),
+            self.description.clone(),
+            projects,
+            contexts,
+            due,
+        ]
+        .concat()
     }
 
     /// Validate the input
@@ -191,7 +170,7 @@ impl TaskInput {
             return Err("Description cannot be empty".to_string());
         }
 
-        if let Some(p) = self.priority
+        if let Some(p) = self.priority.as_ref()
             && !p.is_ascii_uppercase()
         {
             return Err("Priority must be A-Z".to_string());
