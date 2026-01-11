@@ -263,9 +263,12 @@ function handleEdit(task: Task) {
 
 async function handleCopy(task: Task) {
   try {
-    await invoke("write_text_to_clipboard", { text: task.raw_content });
+    // Use frontend clipboard API to avoid thread issues in backend
+    await navigator.clipboard.writeText(task.raw_content);
   } catch (e) {
-    error.value = String(e);
+    console.error("Clipboard write failed", e);
+    // Fallback or show error
+    error.value = "Failed to copy to clipboard: " + String(e);
   }
 }
 
