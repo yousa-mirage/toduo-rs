@@ -1,28 +1,24 @@
 [workspace]
-members = [
-    "todo-core",
-    "todo-tui",
-    "todo-gui/src-tauri",
-]
+members  = ["todo-core", "todo-tui", "todo-gui/src-tauri"]
 resolver = "2"
 
 [workspace.dependencies]
-anyhow = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-chrono = { version = "0.4", features = ["serde"] }
-todo-txt = "4.1.1"
-ratatui = "0.30"
+anyhow    = "1.0"
+serde     = { version = "1.0", features = ["derive"] }
+chrono    = { version = "0.4", features = ["serde"] }
+todo-txt  = "4.1.1"
+ratatui   = "0.30"
 crossterm = "0.29"
-dirs = "6.0"
+dirs      = "6.0"
 
 [workspace.lints.clippy]
 unwrap_used = "deny"
 expect_used = "deny"
-panic = "deny"
+panic       = "deny"
 
 [profile.release]
-lto = true
-opt-level = "z"
-panic = "abort"
-strip = true
+lto           = true
+opt-level     = 3
+panic         = "abort"
+strip         = true
 codegen-units = 1
