@@ -242,36 +242,63 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
     match app.input_mode {
         InputMode::Adding | InputMode::Editing => {
             // Updated to use centered_rect coordinates like Help modal
-            // In ui.rs we used 60% width/height
-            let modal_area = ui::centered_rect(60, 60, area);
+            // In ui.rs we used 60% Width, 80% Height
+            let modal_area = ui::centered_rect(60, 80, area);
 
             if modal_area.contains(mouse_pos) {
-                app.focus = Focus::RightSidebar;
-                // Calculate relative position within modal
-                // The modal has a block + inner area.
-                // Inner area is roughly modal_area minus 1 for borders.
-                let inner_y = y.saturating_sub(modal_area.y).saturating_sub(1);
+                // Check if clicked button area (bottom)
+                // modal_area height is used. Inner area is margin(0) in top-level split.
+                // Inner has 2 chunks: Content (Min 1) and Buttons (Length 3).
 
-                // Layout inside modal:
-                // [0] Desc: 3 (y=0..2)
-                // [1] Pri: 3 (y=3..5)
-                // [2] Proj: 3 (y=6..8)
-                // [3] Ctx: 3 (y=9..11)
-                // [4] Due: 3 (y=12..14)
+                let inner_y_rel = y.saturating_sub(modal_area.y + 1); // +1 because of Block borders
+                let inner_height = modal_area.height.saturating_sub(2);
 
-                // We added margin(1) in layout, so everything is shifted down by 1 more line?
-                // Let's check ui.rs: inner.split with margin(1)
-                let inner_y_adjusted = inner_y.saturating_sub(1);
+                // If click is in the last 3 rows of inner area (Buttons)
+                if inner_y_rel >= inner_height.saturating_sub(3) {
+                    let inner_x_rel = x.saturating_sub(modal_area.x + 1);
+                    let inner_width = modal_area.width.saturating_sub(2);
 
-                if inner_y_adjusted < 3 {
+                    // Width is split 50/50
+                    if inner_x_rel < inner_width / 2 {
+                        // Submit
+                        if app.input_mode == InputMode::Adding {
+                            let _ = app.submit_task();
+                        } else {
+                            let _ = app.submit_edit();
+                        }
+                    } else {
+                        // Cancel
+                        if app.input_mode == InputMode::Adding {
+                            app.cancel_input();
+                        } else {
+                            app.cancel_edit();
+                        }
+                    }
+                    return;
+                }
+
+                // If NOT in button area, check input fields
+                // Content area starts at relative Y = 0.
+                // Content Inner has Margin(1)
+                // Constraints: 3, 3, 3, 3, 3, Min(1).
+
+                // We are already inside "content" part of the split.
+                // content_chunks logic in ui.rs has margin(1).
+
+                // inner_y_rel is 0-based index from top of inner block (just below title border)
+                // margin(1) means the fields start at inner_y_rel = 1.
+
+                let content_y = inner_y_rel.saturating_sub(1);
+
+                if content_y < 3 {
                     app.input_field = InputField::Description;
-                } else if inner_y_adjusted < 6 {
+                } else if content_y < 6 {
                     app.input_field = InputField::Priority;
-                } else if inner_y_adjusted < 9 {
+                } else if content_y < 9 {
                     app.input_field = InputField::Projects;
-                } else if inner_y_adjusted < 12 {
+                } else if content_y < 12 {
                     app.input_field = InputField::Contexts;
-                } else if inner_y_adjusted < 15 {
+                } else if content_y < 15 {
                     app.input_field = InputField::DueDate;
                 }
 
@@ -325,6 +352,22 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
                         if app.check_double_click(x, y) {
                             let task_id = app.view_tasks[real_index].id;
                             app.start_edit_task(task_id);
+                        } else {
+                            // Check for completion toggle click logic
+                            // Visual: "✅ " (2 chars) or "☐  " (3 chars)
+                            // "☐  " is used in ui.rs for uncompleted. "✅ " for completed.
+                            // Let's assume a click in the first 3 columns of the list item toggles completion.
+
+                            // chunks[1] is list area.
+                            // x is global column.
+                            // chunks[1].x is list start X.
+                            // ListItem has inner padding? No, List block has borders(TOP). No left border.
+                            // So list content starts at chunks[1].x.
+
+                            let rel_x = x.saturating_sub(chunks[1].x);
+                            if rel_x < 3 {
+                                let _ = app.toggle_complete();
+                            }
                         }
                     }
                 }

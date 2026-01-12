@@ -9,8 +9,12 @@ chrono.workspace = true
 crossterm.workspace = true
 dirs.workspace = true
 ratatui.workspace = true
-unicode-width = "0.1"
+unicode-width = "0.2"
 todo-core = { version = "0.1.0", path = "../todo-core" }
 
 [lints]
 workspace = true
+
+[[bin]]
+name = "td"
+path = "src/main.rs"

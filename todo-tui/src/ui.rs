@@ -34,10 +34,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     draw_main_area(f, app, chunks[1]);
 
     if app.input_mode == InputMode::Adding {
-        let area = centered_rect(60, 60, f.area());
+        let area = centered_rect(60, 80, f.area());
         draw_add_sidebar(f, app, area);
     } else if app.input_mode == InputMode::Editing {
-        let area = centered_rect(60, 60, f.area());
+        let area = centered_rect(60, 80, f.area());
         draw_edit_sidebar(f, app, area);
     } else if app.input_mode == InputMode::ChangingPath {
         draw_path_change_modal(f, app);
@@ -78,11 +78,14 @@ fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(ACCENT)
     };
 
-    let add_btn = Paragraph::new("+ Add Task").style(btn_style).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER)),
-    );
+    let add_btn = Paragraph::new("+ Add Task")
+        .style(btn_style)
+        .alignment(ratatui::layout::Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER)),
+        );
     f.render_widget(add_btn, layout[0]);
 
     // Navigation Items
@@ -140,11 +143,14 @@ fn draw_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(ACCENT)
     };
 
-    let path_btn = Paragraph::new("  ⚙  Change Path").style(path_btn_style).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(BORDER)),
-    );
+    let path_btn = Paragraph::new("⚙  Change Path")
+        .style(path_btn_style)
+        .alignment(ratatui::layout::Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER)),
+        );
     f.render_widget(path_btn, layout[2]);
 }
 
@@ -236,7 +242,7 @@ fn draw_task_list(f: &mut Frame, app: &mut App, area: Rect) {
                     Style::default().fg(COMPLETED).add_modifier(Modifier::BOLD),
                 ));
             } else {
-                spans.push(Span::raw("  "));
+                spans.push(Span::styled("- ", Style::default().fg(TEXT_DIM)));
             }
 
             // Priority
@@ -311,7 +317,18 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
 
     let inner = block.inner(area);
 
-    let chunks = Layout::default()
+    // Split into content (top) and buttons (bottom)
+    // No margin on this split so buttons can be at the bottom
+    let main_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(1),    // Content
+            Constraint::Length(3), // Buttons
+        ])
+        .split(inner);
+
+    // Layout for form fields with margin
+    let content_chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
         .constraints([
@@ -322,7 +339,7 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
             Constraint::Length(3),
             Constraint::Min(1),
         ])
-        .split(inner);
+        .split(main_chunks[0]);
 
     // Get current inputs based on mode
     let (desc, pri, proj, ctx, due) = if app.input_mode == InputMode::Adding {
@@ -353,7 +370,7 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
     };
 
     // We need to calculate scroll *before* drawing to pass it to draw_input_field
-    let inner_width = chunks[active_idx].width.saturating_sub(2) as usize;
+    let inner_width = content_chunks[active_idx].width.saturating_sub(2) as usize;
     let cursor_visual_width = app
         .get_current_input()
         .chars()
@@ -368,7 +385,7 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
 
     draw_input_field(
         f,
-        chunks[0],
+        content_chunks[0],
         "Description",
         desc,
         app.input_field == InputField::Description,
@@ -380,7 +397,7 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
     );
     draw_input_field(
         f,
-        chunks[1],
+        content_chunks[1],
         "Priority (A-Z)",
         pri,
         app.input_field == InputField::Priority,
@@ -392,7 +409,7 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
     );
     draw_input_field(
         f,
-        chunks[2],
+        content_chunks[2],
         "Projects (+)",
         proj,
         app.input_field == InputField::Projects,
@@ -404,7 +421,7 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
     );
     draw_input_field(
         f,
-        chunks[3],
+        content_chunks[3],
         "Contexts (@)",
         ctx,
         app.input_field == InputField::Contexts,
@@ -416,7 +433,7 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
     );
     draw_input_field(
         f,
-        chunks[4],
+        content_chunks[4],
         "Due Date (YYYY-MM-DD)",
         due,
         app.input_field == InputField::DueDate,
@@ -430,10 +447,36 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
     let instructions = Paragraph::new(instructions)
         .style(Style::default().fg(polar_night::NORD3))
         .wrap(Wrap { trim: true });
-    f.render_widget(instructions, chunks[5]);
+    f.render_widget(instructions, content_chunks[5]);
+
+    // Draw buttons
+    let btn_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(main_chunks[1]);
+
+    let submit_btn = Paragraph::new("[ Submit ]")
+        .style(Style::default().fg(ACCENT).add_modifier(Modifier::BOLD))
+        .alignment(ratatui::layout::Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(BORDER)),
+        );
+    f.render_widget(submit_btn, btn_layout[0]);
+
+    let cancel_btn = Paragraph::new("[ Cancel ]")
+        .style(Style::default().fg(aurora::NORD11))
+        .alignment(ratatui::layout::Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(BORDER)),
+        );
+    f.render_widget(cancel_btn, btn_layout[1]);
 
     // Set native cursor position
-    let (cursor_x, cursor_y) = calculate_cursor_position(app, &chunks);
+    let (cursor_x, cursor_y) = calculate_cursor_position(app, &content_chunks);
     f.set_cursor_position(Position::new(cursor_x, cursor_y));
 }
 
