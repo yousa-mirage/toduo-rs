@@ -92,8 +92,16 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                     continue;
                 }
 
-                // Ctrl+C always exits, regardless of input mode
+                // Ctrl+C always exits
                 if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    return Ok(());
+                }
+
+                // q exits only in Normal mode with proper focus
+                if key.code == KeyCode::Char('q')
+                    && app.input_mode == InputMode::Normal
+                    && (app.focus == Focus::Sidebar || app.focus == Focus::MainList)
+                {
                     return Ok(());
                 }
 
@@ -175,8 +183,6 @@ fn handle_path_change_key(app: &mut App, key: event::KeyEvent) {
 /// Handle keyboard input in Normal mode
 fn handle_normal_mode_key(app: &mut App, key: event::KeyEvent) -> Result<()> {
     match key.code {
-        KeyCode::Char('q') => return Ok(()),
-        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => return Ok(()),
         KeyCode::Tab => app.switch_focus(),
         KeyCode::Char('j') | KeyCode::Down => app.next(),
         KeyCode::Char('k') | KeyCode::Up => app.previous(),
