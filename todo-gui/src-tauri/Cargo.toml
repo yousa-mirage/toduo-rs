@@ -27,3 +27,7 @@ dirs = "6"
 
 [lints]
 workspace = true
+
+[[bin]]
+name = "ToDuo"
+path = "src/main.rs"
