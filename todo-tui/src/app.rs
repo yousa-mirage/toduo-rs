@@ -482,50 +482,51 @@ impl App {
     }
 
     /// Insert a character at a specific position (clamped to valid bounds)
+    /// Uses character offset for cursor position, converts to byte offset for String::insert
     fn insert_char_at(&mut self, pos: usize, c: char) {
         match self.input_mode {
             InputMode::Adding => match self.input_field {
                 InputField::Description => {
-                    let pos = pos.min(self.description_input.len());
-                    self.description_input.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.description_input, pos);
+                    self.description_input.insert(byte_pos, c);
                 }
                 InputField::Priority => {
-                    let pos = pos.min(self.priority_input.len());
-                    self.priority_input.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.priority_input, pos);
+                    self.priority_input.insert(byte_pos, c);
                 }
                 InputField::Projects => {
-                    let pos = pos.min(self.projects_input.len());
-                    self.projects_input.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.projects_input, pos);
+                    self.projects_input.insert(byte_pos, c);
                 }
                 InputField::Contexts => {
-                    let pos = pos.min(self.contexts_input.len());
-                    self.contexts_input.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.contexts_input, pos);
+                    self.contexts_input.insert(byte_pos, c);
                 }
                 InputField::DueDate => {
-                    let pos = pos.min(self.due_date_input.len());
-                    self.due_date_input.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.due_date_input, pos);
+                    self.due_date_input.insert(byte_pos, c);
                 }
             },
             InputMode::Editing => match self.input_field {
                 InputField::Description => {
-                    let pos = pos.min(self.edit_description.len());
-                    self.edit_description.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.edit_description, pos);
+                    self.edit_description.insert(byte_pos, c);
                 }
                 InputField::Priority => {
-                    let pos = pos.min(self.edit_priority.len());
-                    self.edit_priority.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.edit_priority, pos);
+                    self.edit_priority.insert(byte_pos, c);
                 }
                 InputField::Projects => {
-                    let pos = pos.min(self.edit_projects.len());
-                    self.edit_projects.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.edit_projects, pos);
+                    self.edit_projects.insert(byte_pos, c);
                 }
                 InputField::Contexts => {
-                    let pos = pos.min(self.edit_contexts.len());
-                    self.edit_contexts.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.edit_contexts, pos);
+                    self.edit_contexts.insert(byte_pos, c);
                 }
                 InputField::DueDate => {
-                    let pos = pos.min(self.edit_due_date.len());
-                    self.edit_due_date.insert(pos, c);
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.edit_due_date, pos);
+                    self.edit_due_date.insert(byte_pos, c);
                 }
             },
             _ => {}
@@ -573,6 +574,16 @@ impl App {
             InputMode::ChangingPath => &self.path_input,
             _ => "",
         }
+    }
+
+    /// Convert character offset to byte offset for a string
+    fn char_offset_to_byte_offset(s: &str, char_offset: usize) -> usize {
+        s.char_indices()
+            .enumerate()
+            .take(char_offset)
+            .last()
+            .map_or(0, |(byte_idx, _)| byte_idx)
+            .min(s.len())
     }
 
     // === Missing methods required by main.rs ===
@@ -665,17 +676,18 @@ impl App {
         Ok(())
     }
 
-    /// Move cursor left in current input field
+    /// Move cursor left in current input field (character-based)
     pub fn move_cursor_left(&mut self) {
         if self.cursor_position > 0 {
             self.cursor_position -= 1;
         }
     }
 
-    /// Move cursor right in current input field
+    /// Move cursor right in current input field (character-based)
     pub fn move_cursor_right(&mut self) {
-        let input_len = self.get_current_input().len();
-        if self.cursor_position < input_len {
+        let input = self.get_current_input();
+        let char_count = input.chars().count();
+        if self.cursor_position < char_count {
             self.cursor_position += 1;
         }
     }
@@ -685,9 +697,9 @@ impl App {
         self.cursor_position = 0;
     }
 
-    /// Move cursor to end of current input field
+    /// Move cursor to end of current input field (character-based)
     pub fn move_cursor_to_end(&mut self) {
-        self.cursor_position = self.get_current_input().len();
+        self.cursor_position = self.get_current_input().chars().count();
     }
 
     /// Handle backspace in current input field

@@ -19,7 +19,7 @@
 //! | `?` | Toggle help |
 //! | `q` | Quit |
 
-use std::io::{self, Stdout, Write};
+use std::io::{self, Stdout};
 
 use anyhow::Result;
 use crossterm::{
@@ -51,11 +51,15 @@ fn main() -> Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    // Enable block cursor (CSI ? 12 h / CSI 2 q)
-    print!("\x1b[2 q");
-    io::stdout().flush()?;
+
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+
+    // Enable block cursor (blinking) - use execute through terminal
+    execute!(
+        terminal.backend_mut(),
+        crossterm::cursor::SetCursorStyle::BlinkingBlock
+    )?;
 
     // Create app and run
     let mut app = App::new()?;

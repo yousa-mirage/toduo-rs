@@ -100,7 +100,9 @@ pub fn get_default_todo_path() -> Result<PathBuf> {
 
 /// Get the todo path to use, preferring saved path over default
 pub fn get_todo_path() -> Result<PathBuf> {
-    if let Some(path) = load_saved_todo_path()?.filter(|p| p.exists()) {
+    // Try to load saved path, ignoring errors (e.g., corrupted config)
+    let saved_path = load_saved_todo_path().unwrap_or_default();
+    if let Some(path) = saved_path.filter(|p| p.exists()) {
         Ok(path)
     } else {
         get_default_todo_path()
