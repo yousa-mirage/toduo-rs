@@ -294,12 +294,20 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
             } else if chunks[1].contains(mouse_pos) {
                 // Clicked Main List
                 app.focus = Focus::MainList;
-                if y > chunks[1].y + 2 {
-                    let item_index = y - (chunks[1].y + 3);
-                    if usize::from(item_index) < app.view_tasks.len() {
-                        app.selected = usize::from(item_index);
+
+                // Layout: Header (1 line) + List Top Border (1 line) = 2 lines offset
+                let list_start_y = chunks[1].y + 2;
+
+                if y >= list_start_y {
+                    let visual_index = (y - list_start_y) as usize;
+                    let real_index = visual_index + app.list_state.offset();
+
+                    if real_index < app.view_tasks.len() {
+                        app.selected = real_index;
+                        app.list_state.select(Some(real_index));
+
                         if app.check_double_click(x, y) {
-                            let task_id = app.view_tasks[usize::from(item_index)].id;
+                            let task_id = app.view_tasks[real_index].id;
                             app.start_edit_task(task_id);
                         }
                     }

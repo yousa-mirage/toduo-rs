@@ -4,6 +4,7 @@
 //! and input handling for the terminal UI.
 
 use anyhow::Result;
+use ratatui::widgets::ListState;
 
 use todo_core::{AppTask, TaskService, get_todo_path};
 
@@ -97,6 +98,8 @@ pub struct App {
     pub view_tasks: Vec<AppTask>,
     /// Currently selected task index in view_tasks
     pub selected: usize,
+    /// List state for rendering and scroll tracking
+    pub list_state: ListState,
     /// Current filter
     pub filter: Filter,
     /// Sidebar item index (0=All, 1=Today, 2=Next7, 3=A, 4=B, 5=C)
@@ -154,6 +157,7 @@ impl App {
             all_tasks: all_tasks.clone(),
             view_tasks: Vec::new(),
             selected: 0,
+            list_state: ListState::default(),
             filter: Filter::All,
             sidebar_index: 0,
             focus: Focus::MainList,
@@ -228,6 +232,7 @@ impl App {
         if self.selected >= self.view_tasks.len() {
             self.selected = self.view_tasks.len().saturating_sub(1);
         }
+        self.list_state.select(Some(self.selected));
     }
 
     /// Resets all input fields to empty and resets focus to Description
@@ -246,6 +251,7 @@ impl App {
             Focus::MainList => {
                 if !self.view_tasks.is_empty() {
                     self.selected = (self.selected + 1) % self.view_tasks.len();
+                    self.list_state.select(Some(self.selected));
                 }
             }
             Focus::Sidebar => {
@@ -265,6 +271,7 @@ impl App {
             Focus::MainList => {
                 if !self.view_tasks.is_empty() {
                     self.selected = self.selected.checked_sub(1).unwrap_or(self.view_tasks.len() - 1);
+                    self.list_state.select(Some(self.selected));
                 }
             }
             Focus::Sidebar => {
@@ -292,12 +299,14 @@ impl App {
     /// Go to first task in the list
     pub fn go_top(&mut self) {
         self.selected = 0;
+        self.list_state.select(Some(self.selected));
     }
 
     /// Go to last task in the list
     pub fn go_bottom(&mut self) {
         if !self.view_tasks.is_empty() {
             self.selected = self.view_tasks.len() - 1;
+            self.list_state.select(Some(self.selected));
         }
     }
 
@@ -334,6 +343,7 @@ impl App {
             if self.selected >= self.view_tasks.len() && !self.view_tasks.is_empty() {
                 self.selected = self.view_tasks.len() - 1;
             }
+            self.list_state.select(Some(self.selected));
             self.status_message = Some("Task deleted".to_string());
         }
         Ok(())

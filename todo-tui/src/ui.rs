@@ -8,7 +8,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Position, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
 
 use unicode_width::UnicodeWidthStr;
@@ -303,10 +303,7 @@ fn draw_task_list(f: &mut Frame, app: &mut App, area: Rect) {
                 .border_style(Style::default().fg(BORDER)),
         );
 
-    let mut state = ListState::default();
-    state.select(Some(app.selected));
-
-    f.render_stateful_widget(list, area, &mut state);
+    f.render_stateful_widget(list, area, &mut app.list_state);
 }
 
 /// Renders the add/edit task form sidebar with input fields
