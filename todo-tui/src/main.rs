@@ -232,15 +232,7 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
 
     // 2. Handle Three-Pane Layout (Normal, Adding, Editing)
     // Reconstruct layout to match ui.rs
-    let constraints = if app.input_mode == InputMode::Adding || app.input_mode == InputMode::Editing {
-        vec![
-            Constraint::Length(25),
-            Constraint::Min(40),
-            Constraint::Length(40),
-        ]
-    } else {
-        vec![Constraint::Length(25), Constraint::Min(40)]
-    };
+    let constraints = vec![Constraint::Length(25), Constraint::Min(40)];
 
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -249,21 +241,45 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
 
     match app.input_mode {
         InputMode::Adding | InputMode::Editing => {
-            // Interactions restricted to the Right Sidebar (chunks[2])
-            if chunks[2].contains(mouse_pos) {
+            // Updated to use centered_rect coordinates like Help modal
+            // In ui.rs we used 60% width/height
+            let modal_area = ui::centered_rect(60, 60, area);
+
+            if modal_area.contains(mouse_pos) {
                 app.focus = Focus::RightSidebar;
-                let sidebar_y = y - chunks[2].y;
-                app.input_field = match sidebar_y {
-                    1..=3 => InputField::Description,
-                    4..=6 => InputField::Priority,
-                    7..=9 => InputField::Projects,
-                    10..=12 => InputField::Contexts,
-                    13..=15 => InputField::DueDate,
-                    _ => InputField::Description,
-                };
+                // Calculate relative position within modal
+                // The modal has a block + inner area.
+                // Inner area is roughly modal_area minus 1 for borders.
+                let inner_y = y.saturating_sub(modal_area.y).saturating_sub(1);
+
+                // Layout inside modal:
+                // [0] Desc: 3 (y=0..2)
+                // [1] Pri: 3 (y=3..5)
+                // [2] Proj: 3 (y=6..8)
+                // [3] Ctx: 3 (y=9..11)
+                // [4] Due: 3 (y=12..14)
+
+                // We added margin(1) in layout, so everything is shifted down by 1 more line?
+                // Let's check ui.rs: inner.split with margin(1)
+                let inner_y_adjusted = inner_y.saturating_sub(1);
+
+                if inner_y_adjusted < 3 {
+                    app.input_field = InputField::Description;
+                } else if inner_y_adjusted < 6 {
+                    app.input_field = InputField::Priority;
+                } else if inner_y_adjusted < 9 {
+                    app.input_field = InputField::Projects;
+                } else if inner_y_adjusted < 12 {
+                    app.input_field = InputField::Contexts;
+                } else if inner_y_adjusted < 15 {
+                    app.input_field = InputField::DueDate;
+                }
+
+                // Only reset cursor position if we actually changed field?
+                // Or updating is fine.
                 app.cursor_position = app.get_current_input().chars().count();
             } else {
-                // Clicking outside the active form panel closes it
+                // Clicking outside closes the modal
                 if app.input_mode == InputMode::Adding {
                     app.cancel_input();
                 } else {

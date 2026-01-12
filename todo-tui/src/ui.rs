@@ -18,21 +18,12 @@ use crate::theme::*;
 
 /// Main draw function - orchestrates rendering of all UI components
 pub fn draw(f: &mut Frame, app: &mut App) {
-    // 1. Sidebar | 2. Main Content | 3. Right Sidebar (Conditional)
+    // 1. Sidebar | 2. Main Content
 
-    // Determine constraints
-    let constraints = if app.input_mode == InputMode::Adding || app.input_mode == InputMode::Editing {
-        vec![
-            Constraint::Length(25), // Sidebar
-            Constraint::Min(40),    // Main
-            Constraint::Length(40), // Right Sidebar
-        ]
-    } else {
-        vec![
-            Constraint::Length(25), // Sidebar
-            Constraint::Min(40),    // Main
-        ]
-    };
+    let constraints = vec![
+        Constraint::Length(25), // Sidebar
+        Constraint::Min(40),    // Main
+    ];
 
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -43,9 +34,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     draw_main_area(f, app, chunks[1]);
 
     if app.input_mode == InputMode::Adding {
-        draw_add_sidebar(f, app, chunks[2]);
+        let area = centered_rect(60, 60, f.area());
+        draw_add_sidebar(f, app, area);
     } else if app.input_mode == InputMode::Editing {
-        draw_edit_sidebar(f, app, chunks[2]);
+        let area = centered_rect(60, 60, f.area());
+        draw_edit_sidebar(f, app, area);
     } else if app.input_mode == InputMode::ChangingPath {
         draw_path_change_modal(f, app);
     }
@@ -308,9 +301,10 @@ fn draw_task_list(f: &mut Frame, app: &mut App, area: Rect) {
 
 /// Renders the add/edit task form sidebar with input fields
 fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instructions: &str) {
+    f.render_widget(Clear, area);
     let block = Block::default()
         .title(title)
-        .borders(Borders::LEFT)
+        .borders(Borders::ALL)
         .border_style(Style::default().fg(ACCENT))
         .style(Style::default().bg(BG_LIGHT));
     f.render_widget(block.clone(), area);
@@ -349,12 +343,40 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
         )
     };
 
+    // Calculate scroll for the active field
+    let active_idx = match app.input_field {
+        InputField::Description => 0,
+        InputField::Priority => 1,
+        InputField::Projects => 2,
+        InputField::Contexts => 3,
+        InputField::DueDate => 4,
+    };
+
+    // We need to calculate scroll *before* drawing to pass it to draw_input_field
+    let inner_width = chunks[active_idx].width.saturating_sub(2) as usize;
+    let cursor_visual_width = app
+        .get_current_input()
+        .chars()
+        .take(app.cursor_position)
+        .collect::<String>()
+        .width();
+    let scroll_offset = if cursor_visual_width < inner_width {
+        0
+    } else {
+        cursor_visual_width - inner_width + 1
+    };
+
     draw_input_field(
         f,
         chunks[0],
         "Description",
         desc,
         app.input_field == InputField::Description,
+        if app.input_field == InputField::Description {
+            scroll_offset
+        } else {
+            0
+        },
     );
     draw_input_field(
         f,
@@ -362,6 +384,11 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
         "Priority (A-Z)",
         pri,
         app.input_field == InputField::Priority,
+        if app.input_field == InputField::Priority {
+            scroll_offset
+        } else {
+            0
+        },
     );
     draw_input_field(
         f,
@@ -369,6 +396,11 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
         "Projects (+)",
         proj,
         app.input_field == InputField::Projects,
+        if app.input_field == InputField::Projects {
+            scroll_offset
+        } else {
+            0
+        },
     );
     draw_input_field(
         f,
@@ -376,6 +408,11 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
         "Contexts (@)",
         ctx,
         app.input_field == InputField::Contexts,
+        if app.input_field == InputField::Contexts {
+            scroll_offset
+        } else {
+            0
+        },
     );
     draw_input_field(
         f,
@@ -383,6 +420,11 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
         "Due Date (YYYY-MM-DD)",
         due,
         app.input_field == InputField::DueDate,
+        if app.input_field == InputField::DueDate {
+            scroll_offset
+        } else {
+            0
+        },
     );
 
     let instructions = Paragraph::new(instructions)
@@ -391,11 +433,13 @@ fn draw_task_form(f: &mut Frame, app: &mut App, area: Rect, title: &str, instruc
     f.render_widget(instructions, chunks[5]);
 
     // Set native cursor position
-    f.set_cursor_position(calculate_cursor_position(app, &chunks));
+    let (cursor_x, cursor_y) = calculate_cursor_position(app, &chunks);
+    f.set_cursor_position(Position::new(cursor_x, cursor_y));
 }
 
 /// Calculate cursor position based on current input field
-fn calculate_cursor_position(app: &App, chunks: &[Rect]) -> Position {
+/// Returns (screen_x, screen_y) and also indirectly handles scroll calculation logic for consistency
+fn calculate_cursor_position(app: &App, chunks: &[Rect]) -> (u16, u16) {
     let text = app.get_current_input();
 
     let chunk_index = match app.input_field {
@@ -406,18 +450,33 @@ fn calculate_cursor_position(app: &App, chunks: &[Rect]) -> Position {
         InputField::DueDate => 4,
     };
 
-    // Convert char offset to visual width
-    let width = text.chars().take(app.cursor_position).collect::<String>().width();
+    let inner_width = chunks[chunk_index].width.saturating_sub(2) as usize;
 
-    let x = (chunks[chunk_index].x + 1 + width as u16)
-        .min(chunks[chunk_index].x + chunks[chunk_index].width - 2);
+    // Convert char offset to visual width
+    let cursor_visual_width = text.chars().take(app.cursor_position).collect::<String>().width();
+
+    // Calculate scroll offset
+    let scroll = if cursor_visual_width < inner_width {
+        0
+    } else {
+        cursor_visual_width - inner_width + 1
+    };
+
+    let x = chunks[chunk_index].x + 1 + (cursor_visual_width - scroll) as u16;
     let y = chunks[chunk_index].y + 1;
 
-    Position::new(x, y)
+    (x, y)
 }
 
 /// Helper to draw an input field
-fn draw_input_field(f: &mut Frame, area: Rect, label: &str, text: &str, active: bool) {
+fn draw_input_field(
+    f: &mut Frame,
+    area: Rect,
+    label: &str,
+    text: &str,
+    active: bool,
+    scroll_offset: usize,
+) {
     let border_style = if active {
         Style::default().fg(ACCENT)
     } else {
@@ -426,13 +485,16 @@ fn draw_input_field(f: &mut Frame, area: Rect, label: &str, text: &str, active: 
 
     let bg_color = if active { BG_DARK } else { BG_LIGHT };
 
-    let paragraph = Paragraph::new(text).style(Style::default().fg(TEXT)).block(
-        Block::default()
-            .title(format!(" {} ", label))
-            .borders(Borders::ALL)
-            .border_style(border_style)
-            .style(Style::default().bg(bg_color)),
-    );
+    let paragraph = Paragraph::new(text)
+        .style(Style::default().fg(TEXT))
+        .scroll((0, scroll_offset as u16))
+        .block(
+            Block::default()
+                .title(format!(" {} ", label))
+                .borders(Borders::ALL)
+                .border_style(border_style)
+                .style(Style::default().bg(bg_color)),
+        );
 
     f.render_widget(paragraph, area);
 }
