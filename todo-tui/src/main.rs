@@ -210,7 +210,29 @@ fn handle_normal_mode_key(app: &mut App, key: event::KeyEvent) -> Result<()> {
 
 /// Handle mouse click events
 fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
-    let constraints = if app.input_mode == InputMode::Adding {
+    let mouse_pos = ratatui::layout::Position { x, y };
+
+    // 1. Handle Modal Overlays (Help, Change Path)
+    // Clicking outside closes them.
+    if app.input_mode == InputMode::Help {
+        let help_area = ui::centered_rect(50, 60, area);
+        if !help_area.contains(mouse_pos) {
+            app.toggle_help();
+        }
+        return;
+    }
+
+    if app.input_mode == InputMode::ChangingPath {
+        let path_area = ui::centered_rect(50, 30, area);
+        if !path_area.contains(mouse_pos) {
+            app.cancel_change_path();
+        }
+        return;
+    }
+
+    // 2. Handle Three-Pane Layout (Normal, Adding, Editing)
+    // Reconstruct layout to match ui.rs
+    let constraints = if app.input_mode == InputMode::Adding || app.input_mode == InputMode::Editing {
         vec![
             Constraint::Length(25),
             Constraint::Min(40),
@@ -225,44 +247,65 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
         .constraints(constraints)
         .split(area);
 
-    if chunks[0].contains(ratatui::layout::Position { x, y }) {
-        // Clicked Sidebar
-        app.focus = Focus::Sidebar;
-        let sidebar_inner_y = y - chunks[0].y;
-        if sidebar_inner_y < 3 {
-            app.start_add_task();
-        } else if sidebar_inner_y < 9 {
-            let list_y = sidebar_inner_y - 3;
-            app.sidebar_index = list_y as usize;
-            app.update_filter_from_sidebar();
-        } else {
-            app.start_change_path();
-        }
-    } else if chunks[1].contains(ratatui::layout::Position { x, y }) {
-        // Clicked Main List
-        app.focus = Focus::MainList;
-        if y > chunks[1].y + 2 {
-            let item_index = y - (chunks[1].y + 3);
-            if usize::from(item_index) < app.view_tasks.len() {
-                app.selected = usize::from(item_index);
-                if app.check_double_click(x, y) {
-                    let task_id = app.view_tasks[usize::from(item_index)].id;
-                    app.start_edit_task(task_id);
+    match app.input_mode {
+        InputMode::Adding | InputMode::Editing => {
+            // Interactions restricted to the Right Sidebar (chunks[2])
+            if chunks[2].contains(mouse_pos) {
+                app.focus = Focus::RightSidebar;
+                let sidebar_y = y - chunks[2].y;
+                app.input_field = match sidebar_y {
+                    1..=3 => InputField::Description,
+                    4..=6 => InputField::Priority,
+                    7..=9 => InputField::Projects,
+                    10..=12 => InputField::Contexts,
+                    13..=15 => InputField::DueDate,
+                    _ => InputField::Description,
+                };
+                app.cursor_position = app.get_current_input().chars().count();
+            } else {
+                // Clicking outside the active form panel closes it
+                if app.input_mode == InputMode::Adding {
+                    app.cancel_input();
+                } else {
+                    app.cancel_edit();
                 }
             }
         }
-    } else if chunks.len() > 2 && chunks[2].contains(ratatui::layout::Position { x, y }) {
-        // Clicked Right Sidebar
-        app.focus = Focus::RightSidebar;
-        let sidebar_y = y - chunks[2].y;
-        app.input_field = match sidebar_y {
-            1..=3 => InputField::Description,
-            4..=6 => InputField::Priority,
-            7..=9 => InputField::Projects,
-            10..=12 => InputField::Contexts,
-            13..=15 => InputField::DueDate,
-            _ => InputField::Description,
-        };
-        app.cursor_position = app.get_current_input().chars().count();
+        InputMode::Normal => {
+            // Normal interaction with Sidebar and Main List
+            if chunks[0].contains(mouse_pos) {
+                // Clicked Sidebar
+                app.focus = Focus::Sidebar;
+                let sidebar_inner_y = y - chunks[0].y;
+                let sidebar_height = chunks[0].height;
+
+                if sidebar_inner_y < 3 {
+                    app.start_add_task();
+                } else if sidebar_inner_y >= sidebar_height.saturating_sub(3) {
+                    app.start_change_path();
+                } else {
+                    // Check if clicked exactly on a list item
+                    let list_y = sidebar_inner_y.saturating_sub(3);
+                    if list_y < 6 {
+                        app.sidebar_index = list_y as usize;
+                        app.update_filter_from_sidebar();
+                    }
+                }
+            } else if chunks[1].contains(mouse_pos) {
+                // Clicked Main List
+                app.focus = Focus::MainList;
+                if y > chunks[1].y + 2 {
+                    let item_index = y - (chunks[1].y + 3);
+                    if usize::from(item_index) < app.view_tasks.len() {
+                        app.selected = usize::from(item_index);
+                        if app.check_double_click(x, y) {
+                            let task_id = app.view_tasks[usize::from(item_index)].id;
+                            app.start_edit_task(task_id);
+                        }
+                    }
+                }
+            }
+        }
+        _ => {} // Handled above
     }
 }
