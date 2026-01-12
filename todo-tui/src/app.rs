@@ -389,7 +389,7 @@ impl App {
             self.edit_contexts = task.contexts.join(" ");
             self.edit_due_date = task.due_date.clone().unwrap_or_default();
             self.input_field = InputField::Description;
-            self.cursor_position = self.edit_description.len();
+            self.cursor_position = self.edit_description.chars().count();
         }
     }
 
@@ -444,22 +444,22 @@ impl App {
     /// Reset cursor position to end of current input
     pub fn reset_cursor_position(&mut self) {
         self.cursor_position = match self.input_field {
-            InputField::Description => self.description_input.len(),
-            InputField::Priority => self.priority_input.len(),
-            InputField::Projects => self.projects_input.len(),
-            InputField::Contexts => self.contexts_input.len(),
-            InputField::DueDate => self.due_date_input.len(),
+            InputField::Description => self.description_input.chars().count(),
+            InputField::Priority => self.priority_input.chars().count(),
+            InputField::Projects => self.projects_input.chars().count(),
+            InputField::Contexts => self.contexts_input.chars().count(),
+            InputField::DueDate => self.due_date_input.chars().count(),
         };
     }
 
     /// Reset cursor position for edit inputs
     pub fn reset_edit_cursor_position(&mut self) {
         self.cursor_position = match self.input_field {
-            InputField::Description => self.edit_description.len(),
-            InputField::Priority => self.edit_priority.len(),
-            InputField::Projects => self.edit_projects.len(),
-            InputField::Contexts => self.edit_contexts.len(),
-            InputField::DueDate => self.edit_due_date.len(),
+            InputField::Description => self.edit_description.chars().count(),
+            InputField::Priority => self.edit_priority.chars().count(),
+            InputField::Projects => self.edit_projects.chars().count(),
+            InputField::Contexts => self.edit_contexts.chars().count(),
+            InputField::DueDate => self.edit_due_date.chars().count(),
         };
     }
 
@@ -533,6 +533,78 @@ impl App {
         }
     }
 
+    /// Delete a character at a specific position (clamped to valid bounds)
+    /// Uses character offset for cursor position, converts to byte offset for String::remove
+    fn delete_char_at(&mut self, pos: usize) {
+        match self.input_mode {
+            InputMode::Adding => match self.input_field {
+                InputField::Description => {
+                    if pos < self.description_input.chars().count() {
+                        let byte_pos = Self::char_offset_to_byte_offset(&self.description_input, pos);
+                        self.description_input.remove(byte_pos);
+                    }
+                }
+                InputField::Priority => {
+                    self.priority_input.clear();
+                }
+                InputField::Projects => {
+                    if pos < self.projects_input.chars().count() {
+                        let byte_pos = Self::char_offset_to_byte_offset(&self.projects_input, pos);
+                        self.projects_input.remove(byte_pos);
+                    }
+                }
+                InputField::Contexts => {
+                    if pos < self.contexts_input.chars().count() {
+                        let byte_pos = Self::char_offset_to_byte_offset(&self.contexts_input, pos);
+                        self.contexts_input.remove(byte_pos);
+                    }
+                }
+                InputField::DueDate => {
+                    if pos < self.due_date_input.chars().count() {
+                        let byte_pos = Self::char_offset_to_byte_offset(&self.due_date_input, pos);
+                        self.due_date_input.remove(byte_pos);
+                    }
+                }
+            },
+            InputMode::Editing => match self.input_field {
+                InputField::Description => {
+                    if pos < self.edit_description.chars().count() {
+                        let byte_pos = Self::char_offset_to_byte_offset(&self.edit_description, pos);
+                        self.edit_description.remove(byte_pos);
+                    }
+                }
+                InputField::Priority => {
+                    self.edit_priority.clear();
+                }
+                InputField::Projects => {
+                    if pos < self.edit_projects.chars().count() {
+                        let byte_pos = Self::char_offset_to_byte_offset(&self.edit_projects, pos);
+                        self.edit_projects.remove(byte_pos);
+                    }
+                }
+                InputField::Contexts => {
+                    if pos < self.edit_contexts.chars().count() {
+                        let byte_pos = Self::char_offset_to_byte_offset(&self.edit_contexts, pos);
+                        self.edit_contexts.remove(byte_pos);
+                    }
+                }
+                InputField::DueDate => {
+                    if pos < self.edit_due_date.chars().count() {
+                        let byte_pos = Self::char_offset_to_byte_offset(&self.edit_due_date, pos);
+                        self.edit_due_date.remove(byte_pos);
+                    }
+                }
+            },
+            InputMode::ChangingPath => {
+                if pos < self.path_input.chars().count() {
+                    let byte_pos = Self::char_offset_to_byte_offset(&self.path_input, pos);
+                    self.path_input.remove(byte_pos);
+                }
+            }
+            _ => {}
+        }
+    }
+
     /// Set the current input string
     fn set_input_string(&mut self, s: String) {
         match self.input_mode {
@@ -579,11 +651,9 @@ impl App {
     /// Convert character offset to byte offset for a string
     fn char_offset_to_byte_offset(s: &str, char_offset: usize) -> usize {
         s.char_indices()
-            .enumerate()
-            .take(char_offset)
-            .last()
-            .map_or(0, |(byte_idx, _)| byte_idx)
-            .min(s.len())
+            .nth(char_offset)
+            .map(|(idx, _)| idx)
+            .unwrap_or(s.len())
     }
 
     // === Missing methods required by main.rs ===
@@ -705,46 +775,7 @@ impl App {
     /// Handle backspace in current input field
     pub fn handle_backspace(&mut self) {
         if self.cursor_position > 0 {
-            match self.input_mode {
-                InputMode::Adding => match self.input_field {
-                    InputField::Description => {
-                        self.description_input.pop();
-                    }
-                    InputField::Priority => {
-                        self.priority_input.clear();
-                    }
-                    InputField::Projects => {
-                        self.projects_input.pop();
-                    }
-                    InputField::Contexts => {
-                        self.contexts_input.pop();
-                    }
-                    InputField::DueDate => {
-                        self.due_date_input.pop();
-                    }
-                },
-                InputMode::Editing => match self.input_field {
-                    InputField::Description => {
-                        self.edit_description.pop();
-                    }
-                    InputField::Priority => {
-                        self.edit_priority.clear();
-                    }
-                    InputField::Projects => {
-                        self.edit_projects.pop();
-                    }
-                    InputField::Contexts => {
-                        self.edit_contexts.pop();
-                    }
-                    InputField::DueDate => {
-                        self.edit_due_date.pop();
-                    }
-                },
-                InputMode::ChangingPath => {
-                    self.path_input.pop();
-                }
-                _ => {}
-            }
+            self.delete_char_at(self.cursor_position - 1);
             self.cursor_position = self.cursor_position.saturating_sub(1);
         }
     }
@@ -761,7 +792,7 @@ impl App {
             .parent()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
-        self.cursor_position = self.path_input.len();
+        self.cursor_position = self.path_input.chars().count();
     }
 
     /// Cancel path change and return to normal mode
@@ -821,7 +852,8 @@ impl App {
 
     /// Handle character input for path change mode
     pub fn handle_path_char(&mut self, c: char) {
-        self.path_input.insert(self.cursor_position, c);
+        let byte_pos = Self::char_offset_to_byte_offset(&self.path_input, self.cursor_position);
+        self.path_input.insert(byte_pos, c);
         self.cursor_position += 1;
     }
 

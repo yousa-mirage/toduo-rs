@@ -11,6 +11,8 @@ use ratatui::{
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
 };
 
+use unicode_width::UnicodeWidthStr;
+
 use crate::app::{App, Focus, InputField, InputMode};
 use crate::theme::*;
 
@@ -379,14 +381,10 @@ fn calculate_cursor_position(app: &App, chunks: &[Rect]) -> Position {
         InputField::DueDate => 4,
     };
 
-    // Convert byte offset to char offset for proper display
-    let char_offset = text
-        .char_indices()
-        .enumerate()
-        .take_while(|(_, (byte_idx, _))| *byte_idx < app.cursor_position)
-        .count();
+    // Convert char offset to visual width
+    let width = text.chars().take(app.cursor_position).collect::<String>().width();
 
-    let x = (chunks[chunk_index].x + 1 + char_offset as u16)
+    let x = (chunks[chunk_index].x + 1 + width as u16)
         .min(chunks[chunk_index].x + chunks[chunk_index].width - 2);
     let y = chunks[chunk_index].y + 1;
 
@@ -441,7 +439,6 @@ fn draw_help_modal(f: &mut Frame) {
     let area = centered_rect(50, 60, f.area());
 
     f.render_widget(Clear, area);
-    // ... existing help code ...
     let help_text = vec![
         "",
         "  Navigation",
@@ -449,14 +446,24 @@ fn draw_help_modal(f: &mut Frame) {
         "  Tab     Switch Focus (Sidebar/List)",
         "  j/↓     Move down",
         "  k/↑     Move up",
+        "  g       Go to top",
+        "  G       Go to bottom",
         "",
-        "  Actions",
-        "  ───────",
-        "  a       Add new task (Open Sidebar)",
+        "  Task Actions",
+        "  ────────────",
+        "  a       Add new task",
         "  Space   Toggle complete",
-        "  Click   Select item / Filter",
+        "  d       Delete task",
+        "  1-5     Set priority (A/B/C/D/E)",
+        "  0       Clear priority",
+        "  Enter   Toggle complete (in task list)",
+        "  Click   Select / Filter / Edit",
         "",
-        "  q       Quit",
+        "  Other",
+        "  ──────",
+        "  r       Refresh",
+        "  ?       Toggle this help",
+        "  q / Ctrl+C  Quit",
     ];
 
     let help = Paragraph::new(help_text.join("\n"))
@@ -516,7 +523,14 @@ fn draw_path_change_modal(f: &mut Frame, app: &mut App) {
     f.render_widget(instructions, chunks[1]);
 
     // Set native cursor position
-    let x = (chunks[0].x + 1 + app.cursor_position as u16).min(chunks[0].x + chunks[0].width - 2);
+    let width = app
+        .path_input
+        .chars()
+        .take(app.cursor_position)
+        .collect::<String>()
+        .width();
+
+    let x = (chunks[0].x + 1 + width as u16).min(chunks[0].x + chunks[0].width - 2);
     let y = chunks[0].y + 1;
     f.set_cursor_position(Position::new(x, y));
 }

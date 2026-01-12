@@ -192,6 +192,8 @@ fn handle_normal_mode_key(app: &mut App, key: event::KeyEvent) -> Result<()> {
         KeyCode::Char('1') => app.set_priority_selected(Some('A'))?,
         KeyCode::Char('2') => app.set_priority_selected(Some('B'))?,
         KeyCode::Char('3') => app.set_priority_selected(Some('C'))?,
+        KeyCode::Char('4') => app.set_priority_selected(Some('D'))?,
+        KeyCode::Char('5') => app.set_priority_selected(Some('E'))?,
         KeyCode::Char('0') => app.set_priority_selected(None)?,
         KeyCode::Char('r') => app.refresh()?,
         KeyCode::Char('?') => app.toggle_help(),
@@ -255,6 +257,6 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
             13..=15 => InputField::DueDate,
             _ => InputField::Description,
         };
-        app.cursor_position = app.get_current_input().len();
+        app.cursor_position = app.get_current_input().chars().count();
     }
 }
