@@ -160,22 +160,44 @@ fn draw_main_area(f: &mut Frame, app: &mut App, area: Rect) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Title/Header
+            Constraint::Length(1), // Header (Minified)
             Constraint::Min(1),    // List
             Constraint::Length(1), // Footer/Status
         ])
         .split(area);
 
-    // Header
+    // Header - Single line, centered filter name, program name on the right
     let filter_name = app.filter.to_string();
-    let header = Paragraph::new(format!(" {} ({})", filter_name, app.view_tasks.len()))
+    let title = format!(" {} ({}) ", filter_name, app.view_tasks.len());
+
+    let header_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(33),
+            Constraint::Percentage(34),
+            Constraint::Percentage(33),
+        ])
+        .split(layout[0]);
+
+    // 1. Divider / Empty Left
+    // Just a placeholder to maintain alignment, or could render a line if height allowed
+    // For single line, we just leave it empty for now, or use it for left-aligned content in future
+
+    // 2. Center Title
+    let header_title = Paragraph::new(title)
         .style(Style::default().fg(TEXT_HIGHLIGHT).add_modifier(Modifier::BOLD))
-        .block(
-            Block::default()
-                .borders(Borders::BOTTOM)
-                .border_style(Style::default().fg(BORDER)),
-        );
-    f.render_widget(header, layout[0]);
+        .alignment(ratatui::layout::Alignment::Center);
+    f.render_widget(header_title, header_chunks[1]);
+
+    // 3. Right: "ToDuo"
+    let program_name = Paragraph::new("ToDuo ")
+        .style(
+            Style::default()
+                .fg(ACCENT)
+                .add_modifier(Modifier::BOLD | Modifier::ITALIC),
+        )
+        .alignment(ratatui::layout::Alignment::Right);
+    f.render_widget(program_name, header_chunks[2]);
 
     // Task List
     draw_task_list(f, app, layout[1]);
@@ -273,7 +295,13 @@ fn draw_task_list(f: &mut Frame, app: &mut App, area: Rect) {
         })
         .collect();
 
-    let list = List::new(items).highlight_style(Style::default().bg(SELECTION));
+    let list = List::new(items)
+        .highlight_style(Style::default().bg(SELECTION))
+        .block(
+            Block::default()
+                .borders(Borders::TOP)
+                .border_style(Style::default().fg(BORDER)),
+        );
 
     let mut state = ListState::default();
     state.select(Some(app.selected));
