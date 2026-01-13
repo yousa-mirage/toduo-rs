@@ -8,6 +8,11 @@ default:
 # 🚀 构建命令 (Build)
 # ==========================================
 
+# 一键安装依赖
+setup:
+    @echo "📦 Installing frontend dependencies..."
+    @cd todo-gui && bun install
+
 # 一键构建所有
 build: build-tui build-gui
     @echo "🎉 All builds finished!"
@@ -21,7 +26,7 @@ build-tui:
 # 构建 GUI
 build-gui:
     @echo "🖥️  Building GUI (Tauri) Release..."
-    @cd todo-gui && bun install && bun tauri build
+    @cd todo-gui && bun tauri build
 
 # ==========================================
 # 🛠️ 辅助命令 (Utils)
@@ -30,8 +35,9 @@ build-gui:
 # 清理缓存
 clean:
     @echo "🧹 Cleaning artifacts..."
-    cargo clean
-    -rm -rf todo-gui/dist
+    @cargo clean
+    @{{ if os() == "windows" { "powershell -c \"if (Test-Path todo-gui/dist) { rm -r -fo todo-gui/dist }\"" } else { "rm -rf todo-gui/dist" } }}
+    @echo "✨ Cleaned!"
 
 # 格式化与检查
 check:
@@ -51,4 +57,5 @@ show-paths:
 
 # 启动开发环境
 dev:
-    @cd todo-gui && bun install && bun tauri dev
+    @echo "🔥 Starting dev server..."
+    @cd todo-gui && bun tauri dev

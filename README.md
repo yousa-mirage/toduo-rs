@@ -20,8 +20,6 @@
 * **📄 数据自主**: 完全兼容标准 [todo.txt](http://todotxt.org/) 格式。你的数据只是纯文本，本地优先。
 * **🔧 极客友好**: 提供强大的 CLI 管道命令支持，轻松集成到你的脚本或工作流中。
 
----
-
 ## 📸 预览 (Screenshots)
 
 | 图形界面 (GUI) | 终端界面 (TUI) |
@@ -29,13 +27,9 @@
 | ![GUI Screenshot](./assets/gui-preview.png) | ![TUI Screenshot](./assets/tui-preview.png) |
 | *现代、清爽、直观* | *硬核、高效、键盘驱动* |
 
----
-
 ## 🤝 贡献
 
 非常欢迎贡献代码！无论是修复 Bug、增加新功能，还是改进文档。请参考 `CONTRIBUTING.md` 了解详情。
-
----
 
 ## 📄 许可
 

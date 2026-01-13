@@ -4,9 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-TODO
-
-## [0.1.0] - 2025-01-13
+## [v0.1.0] - 2025-01-13
 
 ### Added
 
@@ -34,13 +32,6 @@ TODO
   - Light/Dark/System theme support
   - System tray integration
   - Keyboard shortcuts (Ctrl+A to add task)
-
-### Changed
-
-- Refactored from single binary to workspace structure
-  - `todo-core`: Core business logic library
-  - `todo-tui`: Terminal interface binary
-  - `todo-gui`: Tauri desktop application
 
 ### Technical
 

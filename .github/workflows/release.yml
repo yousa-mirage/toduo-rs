@@ -1,0 +1,90 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-upload:
+    name: Build on ${{ matrix.os_name }}
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            os_name: windows
+            bin_suffix: .exe
+          - platform: ubuntu-latest
+            os_name: linux
+            bin_suffix: ""
+          - platform: macos-latest
+            os_name: macos
+            bin_suffix: ""
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install Just
+        uses: extractions/setup-just@v3
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev
+
+      - run: just setup && just build
+
+      # 3. 整理并重命名文件 (为了发布时区分平台)
+      - name: Prepare Artifacts
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          
+          # 定义源文件名
+          TUI_SRC="target/release/td${{ matrix.bin_suffix }}"
+          GUI_SRC="target/release/ToDuo${{ matrix.bin_suffix }}"
+          
+          # 定义目标文件名 (加上 OS 后缀，例如 td-windows-amd64.exe)
+          TUI_DEST="artifacts/td-${{ matrix.os_name }}-amd64${{ matrix.bin_suffix }}"
+          GUI_DEST="artifacts/ToDuo-${{ matrix.os_name }}-amd64${{ matrix.bin_suffix }}"
+          
+          # 复制并重命名
+          cp "$TUI_SRC" "$TUI_DEST"
+          cp "$GUI_SRC" "$GUI_DEST"
+          
+          echo "Prepared artifacts:"
+          ls -l artifacts/
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          # 直接上传 artifacts 目录下的所有文件
+          files: artifacts/*
+          # 如果 Release 不存在则自动创建
+          draft: false
+          prerelease: false
+          generate_release_notes: true
