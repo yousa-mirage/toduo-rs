@@ -89,6 +89,24 @@ const filteredTasks = computed(() => {
   return result;
 });
 
+// Computed: Header Title & Count
+const headerInfo = computed(() => {
+  let title = "All Tasks";
+  if (currentFilter.value === "today") title = "Today";
+  else if (currentFilter.value === "next7") title = "Next 7 Days";
+  else if (currentFilter.value.startsWith("project:"))
+    title = `Project: ${currentFilter.value.replace("project:", "")}`;
+  else if (currentFilter.value.startsWith("context:"))
+    title = `Context: ${currentFilter.value.replace("context:", "")}`;
+  else if (currentFilter.value.startsWith("priority:")) {
+    const p = currentFilter.value.replace("priority:", "");
+    title = p === "none" ? "No Priority" : `Priority ${p}`;
+  }
+
+  const count = filteredTasks.value.filter((t) => !t.completed).length;
+  return { title, count };
+});
+
 // Stats (unused in new layout)
 // const stats = computed(() => ({
 //   total: tasks.value.length,
@@ -426,10 +444,12 @@ onUnmounted(() => {
         <!-- Header -->
         <header class="app-header">
           <div class="header-left">
-            <h1 class="app-title">Todo.txt</h1>
+            <h1 class="app-title">
+              {{ headerInfo.title }} ({{ headerInfo.count }})
+            </h1>
           </div>
           <div class="header-actions">
-            <!-- Actions moved to sidebar -->
+            <span class="app-brand">ToDuo</span>
           </div>
         </header>
 
@@ -731,5 +751,15 @@ body.dark-theme ::-webkit-scrollbar-thumb:hover {
   to {
     transform: rotate(360deg);
   }
+}
+
+.app-brand {
+  /* Font matches app-title (system font), but italic */
+  font-family: inherit;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--color-primary);
+  letter-spacing: -0.5px;
 }
 </style>

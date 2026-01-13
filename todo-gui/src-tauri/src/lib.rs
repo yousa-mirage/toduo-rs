@@ -6,8 +6,9 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{Manager, State};
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
 
 use todo_core::{
     AppTask, DueStatus, GuiConfig, TaskInput, TaskService, load_config, save_gui_config, save_todo_path,
@@ -283,7 +284,34 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            use tauri::Manager;
+            #[cfg(desktop)]
+            {
+                let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::Space);
+                let shortcut_plugin = tauri_plugin_global_shortcut::Builder::new()
+                    .with_shortcut(shortcut)?
+                    .with_handler(|app, shortcut, event| {
+                        #[allow(clippy::collapsible_if)]
+                        if event.state == ShortcutState::Pressed
+                            && shortcut.matches(Modifiers::CONTROL | Modifiers::ALT, Code::Space)
+                        {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let is_visible = window.is_visible().unwrap_or(false);
+                                let is_minimized = window.is_minimized().unwrap_or(false);
+
+                                if !is_visible || is_minimized {
+                                    let _ = window.unminimize();
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                        }
+                    })
+                    .build();
+                if let Err(e) = app.handle().plugin(shortcut_plugin) {
+                    eprintln!("Failed to register global shortcut: {}", e);
+                }
+            }
+
             use tauri::menu::{Menu, MenuItem};
             use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 
