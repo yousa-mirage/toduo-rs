@@ -117,8 +117,35 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> 
                 }
             }
             Event::Mouse(mouse) => {
-                if mouse.kind == MouseEventKind::Down(MouseButton::Left) {
-                    handle_mouse_click(app, mouse.column, mouse.row, terminal.get_frame().area());
+                match mouse.kind {
+                    MouseEventKind::Down(MouseButton::Left) => {
+                        // Check if clicking on separator (between sidebar and main content)
+                        // Sidebar occupies [0, sidebar_width). Border is at sidebar_width - 1.
+                        // Allow clicking slightly wider area for easier grabbing (on the sidebar side)
+                        // Do NOT include app.sidebar_width as that is the start of content
+                        let drag_start = app.sidebar_width.saturating_sub(2);
+                        if mouse.column >= drag_start && mouse.column < app.sidebar_width {
+                            app.is_resizing_sidebar = true;
+                        } else {
+                            handle_mouse_click(
+                                app,
+                                mouse.column,
+                                mouse.row,
+                                terminal.get_frame().area(),
+                            );
+                        }
+                    }
+                    MouseEventKind::Drag(MouseButton::Left) => {
+                        if app.is_resizing_sidebar {
+                            // Constrain width (min 10, max 50 or half screen)
+                            let new_width = mouse.column.clamp(10, 60);
+                            app.sidebar_width = new_width;
+                        }
+                    }
+                    MouseEventKind::Up(MouseButton::Left) => {
+                        app.is_resizing_sidebar = false;
+                    }
+                    _ => {}
                 }
             }
             _ => {}
@@ -232,12 +259,8 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
 
     // 2. Handle Three-Pane Layout (Normal, Adding, Editing)
     // Reconstruct layout to match ui.rs
-    let constraints = vec![Constraint::Length(25), Constraint::Min(40)];
-
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints(constraints)
-        .split(area);
+    // In Normal mode logic (below) we use dynamic sidebar, but here for modal checks we might not need it?
+    // Actually, Modal covers screen logic is independent of sidebar.
 
     match app.input_mode {
         InputMode::Adding | InputMode::Editing => {
@@ -315,13 +338,35 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
             }
         }
         InputMode::Normal => {
+            // Re-calculate layout chunks to map clicks accurately
+            // This mirrors ui.rs layout logic
+            let constraints = vec![
+                Constraint::Length(app.sidebar_width), // Sidebar
+                Constraint::Min(40),                   // Main
+            ];
+            let chunks = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(constraints)
+                .split(area);
+
             // Normal interaction with Sidebar and Main List
             if chunks[0].contains(mouse_pos) {
                 // Clicked Sidebar
                 app.focus = Focus::Sidebar;
+                // Sidebar logic...
+                // Sidebar has a BLOCK border, so content is inside by 1 char?
+                // ui.rs: draw_sidebar uses Block::default().borders(Borders::RIGHT)
+                // If Borders::RIGHT only, then content x is chunks[0].x.
+                // But the helper `draw_sidebar` uses `block.inner(area)` which respects borders.
+                // With Borders::RIGHT, inner width is width-1.
+
+                // Simplified vertical check (ignoring horizontal padding for hit test flexibility)
                 let sidebar_inner_y = y - chunks[0].y;
                 let sidebar_height = chunks[0].height;
 
+                // Add Button (top 3 lines)
+                // Note: Block border implies the content is offset if it had top border, but here only RIGHT.
+                // So (0,0) inside the sidebar rect is the Add Button.
                 if sidebar_inner_y < 3 {
                     app.start_add_task();
                 } else if sidebar_inner_y >= sidebar_height.saturating_sub(3) {
@@ -354,18 +399,18 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
                             app.start_edit_task(task_id);
                         } else {
                             // Check for completion toggle click logic
-                            // Visual: "✅ " (2 chars) or "☐  " (3 chars)
-                            // "☐  " is used in ui.rs for uncompleted. "✅ " for completed.
-                            // Let's assume a click in the first 3 columns of the list item toggles completion.
-
-                            // chunks[1] is list area.
-                            // x is global column.
-                            // chunks[1].x is list start X.
-                            // ListItem has inner padding? No, List block has borders(TOP). No left border.
-                            // So list content starts at chunks[1].x.
+                            // Visual: "✅ " (2 chars) or "- " (2 chars)
+                            // ui.rs render logic uses 2 chars for completion marker.
+                            // chunks[1] starts at sidebar_width.
+                            // Ratatui List widget has internal padding if block has borders.
+                            // Draw logic in ui.rs: draw_main_area.
+                            // Layout: Header (1), List (Min1), Footer (1).
+                            // List widget in ui.rs DOES NOT have borders or block.
+                            // So content starts at x=chunks[1].x
 
                             let rel_x = x.saturating_sub(chunks[1].x);
-                            if rel_x < 3 {
+                            // Marker is 2 chars wide: columns 0 and 1.
+                            if rel_x < 2 {
                                 let _ = app.toggle_complete();
                             }
                         }

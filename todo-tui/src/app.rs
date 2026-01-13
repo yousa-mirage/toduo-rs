@@ -98,6 +98,10 @@ pub struct App {
     pub view_tasks: Vec<AppTask>,
     /// Currently selected task index in view_tasks
     pub selected: usize,
+    /// Width of the sidebar (in characters)
+    pub sidebar_width: u16,
+    /// Whether the user is currently resizing the sidebar
+    pub is_resizing_sidebar: bool,
     /// List state for rendering and scroll tracking
     pub list_state: ListState,
     /// Current filter
@@ -157,6 +161,8 @@ impl App {
             all_tasks: all_tasks.clone(),
             view_tasks: Vec::new(),
             selected: 0,
+            sidebar_width: 25,
+            is_resizing_sidebar: false,
             list_state: ListState::default(),
             filter: Filter::All,
             sidebar_index: 0,

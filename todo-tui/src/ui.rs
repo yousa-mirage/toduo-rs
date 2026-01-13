@@ -21,8 +21,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     // 1. Sidebar | 2. Main Content
 
     let constraints = vec![
-        Constraint::Length(25), // Sidebar
-        Constraint::Min(40),    // Main
+        Constraint::Length(app.sidebar_width), // Sidebar
+        Constraint::Min(40),                   // Main
     ];
 
     let chunks = Layout::default()
@@ -167,7 +167,8 @@ fn draw_main_area(f: &mut Frame, app: &mut App, area: Rect) {
 
     // Header - Single line, centered filter name, program name on the right
     let filter_name = app.filter.to_string();
-    let title = format!(" {} ({}) ", filter_name, app.view_tasks.len());
+    let uncompleted_count = app.view_tasks.iter().filter(|t| !t.completed).count();
+    let title = format!(" {} ({}) ", filter_name, uncompleted_count);
 
     let header_chunks = Layout::default()
         .direction(Direction::Horizontal)
