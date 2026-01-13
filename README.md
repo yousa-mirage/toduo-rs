@@ -1,4 +1,4 @@
-# ToDuo-rs
+![ToDuo-rs](https://socialify.git.ci/Yousa-Mirage/ToDuo-rs/image?custom_description=%E4%BC%98%E9%9B%85%E3%80%81%E8%BD%BB%E9%87%8F%E3%80%81%E7%BA%AF%E7%B2%B9%E7%9A%84+TODO+%E7%AE%A1%E7%90%86%E5%B7%A5%E5%85%B7%EF%BC%8CTUI+%2B+GUI+%E5%8F%8C%E6%A8%A1%E5%BC%8F%EF%BC%8C%E6%97%A0%E7%BC%9D%E5%88%87%E6%8D%A2%E3%80%82&description=1&font=Bitter&forks=1&issues=1&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2FYousa-Mirage%2FToDuo-rs%2Frefs%2Fheads%2Fmain%2Ftodo-gui%2FToDuo.svg&name=1&owner=1&pattern=Plus&pulls=1&stargazers=1&theme=Light)
 
 ## 📖 简介
 
