@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 const props = defineProps<{
   modelValue: string | null;
   placeholder?: string;
 }>();
 
-const emit = defineEmits<{
-  (e: "update:modelValue", value: string | null): void;
-}>();
+const emit = defineEmits<(e: "update:modelValue", value: string | null) => void>();
 
 const showPicker = ref(false);
 const pickerRef = ref<HTMLElement | null>(null);
@@ -23,7 +21,7 @@ watch(
   (val) => {
     if (val) {
       const d = new Date(val);
-      if (!isNaN(d.getTime())) {
+      if (!Number.isNaN(d.getTime())) {
         currentCursor.value = new Date(d.getFullYear(), d.getMonth(), 1);
       }
     }

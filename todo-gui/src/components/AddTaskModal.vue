@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
-import DatePicker from "./DatePicker.vue";
+import { computed, ref, watch } from "vue";
 
 // Types
 interface Task {

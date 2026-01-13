@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import TaskList from "./components/TaskList.vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import AddTaskModal from "./components/AddTaskModal.vue";
-import SidebarNav from "./components/SidebarNav.vue";
 import SettingsModal from "./components/SettingsModal.vue";
+import SidebarNav from "./components/SidebarNav.vue";
+import TaskList from "./components/TaskList.vue";
 
 // Types
 interface Task {
@@ -275,7 +275,7 @@ async function handleCopy(task: Task) {
   } catch (e) {
     console.error("Clipboard write failed", e);
     // Fallback or show error
-    error.value = "Failed to copy to clipboard: " + String(e);
+    error.value = `Failed to copy to clipboard: ${String(e)}`;
   }
 }
 
@@ -356,17 +356,15 @@ async function initSettings() {
   applyTheme(settingTheme.value);
 
   // System listener
-  window
-    .matchMedia("(prefers-color-scheme: dark)")
-    .addEventListener("change", (e) => {
-      if (settingTheme.value === "system") {
-        if (e.matches) {
-          document.body.classList.add("dark-theme");
-        } else {
-          document.body.classList.remove("dark-theme");
-        }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+    if (settingTheme.value === "system") {
+      if (e.matches) {
+        document.body.classList.add("dark-theme");
+      } else {
+        document.body.classList.remove("dark-theme");
       }
-    });
+    }
+  });
 
   // Handle Minimize to Tray
   const appWindow = getCurrentWindow();

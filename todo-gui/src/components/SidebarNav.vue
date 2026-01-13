@@ -39,9 +39,7 @@ const isCollapsed = ref(savedCollapsed === "true");
 const savedWidth = localStorage.getItem("sidebar-width");
 const initialWidth = savedWidth ? parseInt(savedWidth, 10) : 250;
 // Validate loaded width
-const sidebarWidth = ref(
-  initialWidth >= MIN_WIDTH && initialWidth <= MAX_WIDTH ? initialWidth : 250,
-);
+const sidebarWidth = ref(initialWidth >= MIN_WIDTH && initialWidth <= MAX_WIDTH ? initialWidth : 250);
 
 const isResizing = ref(false);
 
@@ -66,9 +64,7 @@ const counts = computed(() => {
   next7.setDate(now.getDate() + 7);
   const next7Str = now.toISOString().split("T")[0];
 
-  const todayCount = props.tasks.filter(
-    (t) => t.due_date === todayStr && !t.completed,
-  ).length;
+  const todayCount = props.tasks.filter((t) => t.due_date === todayStr && !t.completed).length;
   const next7Count = props.tasks.filter((t) => {
     if (!t.due_date || t.completed) return false;
     return t.due_date >= todayStr && t.due_date <= next7Str;
