@@ -1,40 +1,85 @@
-![ToDuo-rs](https://socialify.git.ci/Yousa-Mirage/ToDuo-rs/image?custom_description=%E4%BC%98%E9%9B%85%E3%80%81%E8%BD%BB%E9%87%8F%E3%80%81%E7%BA%AF%E7%B2%B9%E7%9A%84+TODO+%E7%AE%A1%E7%90%86%E5%B7%A5%E5%85%B7%EF%BC%8CTUI+%2B+GUI+%E5%8F%8C%E6%A8%A1%E5%BC%8F%EF%BC%8C%E6%97%A0%E7%BC%9D%E5%88%87%E6%8D%A2%E3%80%82&description=1&font=Bitter&forks=1&issues=1&language=1&logo=https%3A%2F%2Fgithub.com%2FYousa-Mirage%2FToDuo-rs%2Fblob%2Fmain%2Ftodo-gui%2Fsrc-tauri%2Ficons%2Ficon.png%3Fraw%3Dtrue&name=1&owner=1&pattern=Plus&pulls=1&stargazers=1&theme=Light)
+<div align="center">
 
-## 📖 简介
+![ToDuo-rs](https://socialify.git.ci/Yousa-Mirage/ToDuo-rs/image?custom_description=Events%2C+Lightweight%2C+Pure+TODO+Tool.+TUI+%2B+GUI+Dual+Mode%2C+Based+on+todo.txt&description=1&font=Bitter&forks=1&issues=1&language=1&logo=https%3A%2F%2Fgithub.com%2FYousa-Mirage%2FToDuo-rs%2Fblob%2Fmain%2Ftodo-gui%2Fsrc-tauri%2Ficons%2Ficon.png%3Fraw%3Dtrue&name=1&owner=1&pulls=1&stargazers=1&theme=Auto)
 
-**ToDuo** (To-Do + Duo) 是一个高性能、跨平台的 TODO 任务管理工具，使用 Rust 编写。它基于经典的 `todo.txt` 纯文本协议，核心亮点在于 **TUI + GUI 的双模式**。
+[English](README.md) | [简体中文](README_zh.md)
 
-无论你是习惯鼠标拖拽的**效率办公者**，还是手指不离键盘的**硬核极客**，ToDuo 都能提供最适合你的交互方式：
+</div>
 
-* **GUI 模式**: 现代、优雅、直观。
-* **TUI 模式**: 极速、纯粹、高效。
+## 📖 Introduction
 
-两者共享同一份数据核心，无缝切换，如影随形。
+**ToDuo** (To-Do + Duo) is a high-performance, cross-platform TODO management toolkit written in Rust.
 
-## ✨ 核心特性 (Features)
+It strictly adheres to the standard `todo.txt` plain text protocol. Its core highlight is offering perfectly synchronized **TUI (Terminal User Interface)** and **GUI (Graphical User Interface)** modes.
 
-* **⚡ 极致性能**: 基于 **Rust** 构建，启动速度快如闪电，内存占用极低。
-* **🌗 双模形态**:
-  * **ToDuo (GUI)**: 基于 **Tauri 2.0 + Vue 3**。极简的视觉设计，支持系统托盘、快捷键唤醒、深色模式。
-  * **td (TUI)**: 基于 **Ratatui**。为终端而生，支持 Vim 风格键位，像写代码一样管理任务。
-* **📄 数据自主**: 完全兼容标准 [todo.txt](http://todotxt.org/) 格式。你的数据只是纯文本，本地优先。
-* **🔧 极客友好**: 提供强大的 CLI 管道命令支持，轻松集成到你的脚本或工作流中。
+Whether you are a modern user who prefers mouse clicks or a terminal geek who lives by the keyboard, ToDuo provides the most suitable experience for you, seamlessly switching between the two.
 
-## 📸 预览 (Screenshots)
-
-| 图形界面 (GUI) | 终端界面 (TUI) |
+| Graphical UI (GUI) | Terminal UI (TUI) |
 | :---: | :---: |
-| ![GUI Screenshot](./assets/gui-preview.png) | ![TUI Screenshot](./assets/tui-preview.png) |
-| *现代、清爽、直观* | *硬核、高效、键盘驱动* |
+| ![GUI Screenshot](./.github/gui-preview.png) | ![TUI Screenshot](./.github/tui-preview.png) |
+| *Modern, Clean, Intuitive* | *Hardcore, Efficient, Keyboard-driven* |
 
-## 🤝 贡献
+## ✨ Key Features
 
-非常欢迎贡献代码！无论是修复 Bug、增加新功能，还是改进文档。请参考 `CONTRIBUTING.md` 了解详情。
+* **⚡ Blazing Fast**: Built with **Rust**, ensuring instant startup and minimal resource usage.
+* **🌗 Dual Modes**:
+  * **GUI Mode (ToDuo)**: Modern, elegant, intuitive. Supports system tray, global shortcuts, and dark mode.
+  * **TUI Mode (td)**: Fast, pure. Supports Vim-style keybindings and mouse drag-and-drop.
+* **📄 Data Sovereignty**: Uses plain text [todo.txt](http://todotxt.org/) format. Your data is yours—easy to backup, migrate, and version control.
+* **🔧 Geek Friendly**: Provides powerful CLI piping support, easy to integrate into your scripts or workflows.
 
-## 📄 许可
+## 📦 Download & Install
 
-本项目基于 [**MIT 许可证**](./LICENSE) 开源。这意味着您可以自由地使用、复制、修改、合并、出版发行、散布、再授权及贩售本软件及其副本。
+### Method 1: Direct Download (Recommended)
+
+Visit the [GitHub Releases](https://github.com/Yousa-Mirage/ToDuo-rs/releases) page to download the latest version for your system.
+
+### Method 2: Build from Source
+
+Requires [Rust](https://www.rust-lang.org/) , [Just](https://github.com/casey/just) , and [Bun](https://bun.sh/) .
+
+```bash
+# Clone repository
+git clone https://github.com/Yousa-Mirage/ToDuo-rs.git
+cd ToDuo-rs
+
+# Install dependencies
+just setup
+
+# Build the program
+just build
+```
+
+Binaries will be available in `target/release/`.
+
+## 🚀 Quick Start
+
+This project includes two independent applications. Choose freely based on your scenario:
+
+### 🖥️ GUI Application
+
+Ideal for daily office work and desktop environments.
+👉 **[Read GUI Documentation](./todo-gui/README.md)**
+
+* **Launch**: Run `ToDuo.exe`
+* **Highlight**: Filter views, date pickers, system tray integration.
+
+### 📟 TUI Application
+
+Ideal for developers, servers, or keyboard-driven workflows.
+👉 **[Read TUI Documentation](./todo-tui/README.md)**
+
+* **Launch**: Run `td` in your terminal
+* **Highlight**: Vim-style keys, mouse support, instant response.
+
+## 🤝 Contribution
+
+Contributions are welcome! Whether it's fixing bugs, adding features, or improving documentation.
 
 ---
 
-<div align="center"> Made with ❤️ by <a href="https://github.com/Yousa-Mirage">Yousa-Mirage</a> </div>
+<div align="center">
+
+**MIT License** | **Made with ❤️ by <a href="https://github.com/Yousa-Mirage">Yousa-Mirage**</a>
+
+</div>
