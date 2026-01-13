@@ -1,11 +1,7 @@
 [package]
-name        = "todo-gui"
-version     = "0.1.0"
-description = "ToDuo GUI Application"
-authors     = ["you"]
-edition     = "2024"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+name    = "todo-gui"
+edition = "2024"
+version = { workspace = true }
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
@@ -22,9 +18,9 @@ tauri                        = { version = "2", features = ["tray-icon"] }
 tauri-plugin-dialog          = "2"
 tauri-plugin-opener          = "2"
 tauri-plugin-global-shortcut = "2"
-serde                        = { version = "1", features = ["derive"] }
-todo-core                    = { version = "0.1.0", path = "../../todo-core" }
-dirs                         = "6"
+dirs.workspace               = true
+serde.workspace              = true
+todo-core                    = { path = "../../todo-core" }
 
 [lints]
 workspace = true

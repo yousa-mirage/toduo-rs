@@ -268,8 +268,8 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn create_temp_todo_file(content: &str) -> NamedTempFile {
-        let mut file = NamedTempFile::new().unwrap();
-        write!(file, "{}", content).unwrap();
+        let mut file: NamedTempFile = NamedTempFile::new().unwrap();
+        write!(file, "{content}").unwrap();
         file
     }
 

@@ -1,16 +1,16 @@
 [package]
 name    = "todo-tui"
-version = "0.1.0"
 edition = "2024"
+version = { workspace = true }
 
 [dependencies]
+unicode-width       = "0.2"
 anyhow.workspace    = true
 chrono.workspace    = true
 crossterm.workspace = true
 dirs.workspace      = true
 ratatui.workspace   = true
-unicode-width       = "0.2"
-todo-core           = { version = "0.1.0", path = "../todo-core" }
+todo-core           = { path = "../todo-core" }
 
 [lints]
 workspace = true
