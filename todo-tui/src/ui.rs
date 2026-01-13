@@ -168,7 +168,8 @@ fn draw_main_area(f: &mut Frame, app: &mut App, area: Rect) {
     // Header - Single line, centered filter name, program name on the right
     let filter_name = app.filter.to_string();
     let uncompleted_count = app.view_tasks.iter().filter(|t| !t.completed).count();
-    let title = format!(" {} ({}) ", filter_name, uncompleted_count);
+    let total_count = app.view_tasks.len();
+    let title = format!(" {} ({}/{}) ", filter_name, uncompleted_count, total_count);
 
     let header_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -189,8 +190,8 @@ fn draw_main_area(f: &mut Frame, app: &mut App, area: Rect) {
         .alignment(ratatui::layout::Alignment::Center);
     f.render_widget(header_title, header_chunks[1]);
 
-    // 3. Right: "ToDuo"
-    let program_name = Paragraph::new("ToDuo ")
+    // 3. Right: "ToDuo vX.Y.Z"
+    let program_name = Paragraph::new(format!("ToDuo v{} ", env!("CARGO_PKG_VERSION")))
         .style(
             Style::default()
                 .fg(ACCENT)
@@ -567,7 +568,7 @@ fn draw_edit_sidebar(f: &mut Frame, app: &mut App, area: Rect) {
 
 /// Renders the help modal with keyboard shortcuts
 fn draw_help_modal(f: &mut Frame) {
-    let area = centered_rect(50, 60, f.area());
+    let area = centered_rect(60, 80, f.area());
 
     f.render_widget(Clear, area);
     let help_text = vec![

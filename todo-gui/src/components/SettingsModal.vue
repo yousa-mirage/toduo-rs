@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import logoUrl from "../assets/logo.png";
+
 defineProps<{
   currentPath: string;
   closeToTray: boolean;
@@ -92,8 +94,20 @@ function handleBackdropClick(e: MouseEvent) {
       </div>
 
       <div class="modal-footer">
-        <!-- Footer info -->
-        <span class="version-info">Todo.txt GUI v0.1.0</span>
+        <div class="footer-left">
+          <img :src="logoUrl" class="footer-logo" />
+          <span class="footer-brand">ToDuo-rs</span>
+          <span class="footer-ver">v0.1.0</span>
+        </div>
+        <div class="footer-right">
+          <span class="footer-author">Made with ❤️ by Yousa-Mirage</span>
+          <a
+            href="https://github.com/Yousa-Mirage/ToDuo-rs"
+            target="_blank"
+            class="about-link"
+            >https://github.com/Yousa-Mirage/ToDuo-rs</a
+          >
+        </div>
       </div>
     </div>
   </div>
@@ -284,11 +298,57 @@ function handleBackdropClick(e: MouseEvent) {
   border-top: 1px solid var(--color-border);
   border-bottom-left-radius: var(--radius-lg);
   border-bottom-right-radius: var(--radius-lg);
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.version-info {
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-logo {
+  width: 20px;
+  height: 20px;
+}
+
+.footer-brand {
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.footer-ver {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  opacity: 0.8;
+  /* Removed monospace font to match other text */
+}
+
+.footer-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.footer-author {
   font-size: 0.8rem;
   color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.about-link {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  opacity: 0.7;
+}
+
+.about-link:hover {
+  text-decoration: underline;
+  opacity: 1;
 }
 </style>

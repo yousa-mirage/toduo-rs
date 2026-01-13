@@ -103,7 +103,9 @@ const headerInfo = computed(() => {
     title = p === "none" ? "No Priority" : `Priority ${p}`;
   }
 
-  const count = filteredTasks.value.filter((t) => !t.completed).length;
+  const uncompleted = filteredTasks.value.filter((t) => !t.completed).length;
+  const total = filteredTasks.value.length;
+  const count = `${uncompleted} / ${total}`;
   return { title, count };
 });
 
@@ -448,9 +450,6 @@ onUnmounted(() => {
               {{ headerInfo.title }} ({{ headerInfo.count }})
             </h1>
           </div>
-          <div class="header-actions">
-            <span class="app-brand">ToDuo</span>
-          </div>
         </header>
 
         <div class="scrollable-content" ref="scrollContainer">
@@ -675,11 +674,6 @@ body.dark-theme ::-webkit-scrollbar-thumb:hover {
   cursor: default;
 }
 
-.header-actions {
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
 .scrollable-content {
   flex: 1;
   overflow-y: auto;
@@ -751,15 +745,5 @@ body.dark-theme ::-webkit-scrollbar-thumb:hover {
   to {
     transform: rotate(360deg);
   }
-}
-
-.app-brand {
-  /* Font matches app-title (system font), but italic */
-  font-family: inherit;
-  font-style: italic;
-  font-weight: 700;
-  font-size: 1.2rem;
-  color: var(--color-primary);
-  letter-spacing: -0.5px;
 }
 </style>
