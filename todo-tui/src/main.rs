@@ -409,8 +409,8 @@ fn handle_mouse_click(app: &mut App, x: u16, y: u16, area: Rect) {
                             // So content starts at x=chunks[1].x
 
                             let rel_x = x.saturating_sub(chunks[1].x);
-                            // Marker is 2 chars wide: columns 0 and 1.
-                            if rel_x < 2 {
+                            // Marker is 3 chars wide ([✓] or [ ]), ignoring the trailing space for click
+                            if rel_x < 3 {
                                 let _ = app.toggle_complete();
                             }
                         }

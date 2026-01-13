@@ -240,11 +240,11 @@ fn draw_task_list(f: &mut Frame, app: &mut App, area: Rect) {
             // Completion marker
             if task.completed {
                 spans.push(Span::styled(
-                    "✓ ",
+                    "[✓] ",
                     Style::default().fg(COMPLETED).add_modifier(Modifier::BOLD),
                 ));
             } else {
-                spans.push(Span::styled("- ", Style::default().fg(TEXT_DIM)));
+                spans.push(Span::styled("[ ] ", Style::default().fg(TEXT_DIM)));
             }
 
             // Priority
