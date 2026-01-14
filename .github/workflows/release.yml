@@ -58,34 +58,62 @@ jobs:
       - name: Build
         run: just setup && just build
 
-      # 3. 整理并重命名文件 (为了发布时区分平台)
-      - name: Prepare Artifacts
+      - name: Package Artifacts
         shell: bash
         run: |
+          mkdir -p staging
           mkdir -p artifacts
-          
-          # 定义源文件名
+
+          # Define source paths
           TUI_SRC="target/release/td${{ matrix.bin_suffix }}"
           GUI_SRC="target/release/ToDuo${{ matrix.bin_suffix }}"
-          
-          # 定义目标文件名 (加上 OS 后缀，例如 td-windows-amd64.exe)
-          TUI_DEST="artifacts/td-${{ matrix.os_name }}-amd64${{ matrix.bin_suffix }}"
-          GUI_DEST="artifacts/ToDuo-${{ matrix.os_name }}-amd64${{ matrix.bin_suffix }}"
-          
-          # 复制并重命名
+
+          # Define destination names in staging
+          TUI_DEST="staging/td${{ matrix.bin_suffix }}"
+          GUI_DEST="staging/ToDuo${{ matrix.bin_suffix }}"
+
+          # Copy to staging
           cp "$TUI_SRC" "$TUI_DEST"
           cp "$GUI_SRC" "$GUI_DEST"
-          
-          echo "Prepared artifacts:"
+
+          # Define archive name
+          ARCHIVE_NAME="ToDuo-${{ matrix.os_name }}-amd64"
+
+          # Create archive
+          cd staging
+          if [ "${{ matrix.os_name }}" == "windows" ]; then
+            7z a -tzip "../artifacts/$ARCHIVE_NAME.zip" *
+          else
+            tar -czf "../artifacts/$ARCHIVE_NAME.tar.gz" *
+          fi
+          cd ..
+
+          echo "Packed artifacts:"
           ls -l artifacts/
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          # 直接上传 artifacts 目录下的所有文件
           files: artifacts/*
-          # 如果 Release 不存在则自动创建
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            ## 📥 Installation / Download
+
+            ### Windows
+            1. Download `ToDuo-windows-amd64.zip`.
+            2. Extract the archive.
+            3. Run `ToDuo.exe` (GUI) or `td.exe` (TUI).
+
+            ### macOS
+            1. Download `ToDuo-macos-amd64.tar.gz`.
+            2. Extract the archive.
+            3. Run `./ToDuo` (GUI) or `./td` (TUI) in terminal.
+            > **Note:** macOS may block the application. You might need to allow it in "System Settings > Privacy & Security" or run `xattr -d com.apple.quarantine ToDuo` in terminal if it fails to open.
+
+            ### Linux
+            1. Download `ToDuo-linux-amd64.tar.gz`.
+            2. Extract the archive.
+            3. Run `./ToDuo` or `./td`.
