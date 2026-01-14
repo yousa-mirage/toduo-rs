@@ -21,6 +21,7 @@ tauri-plugin-global-shortcut = "2"
 dirs.workspace               = true
 serde.workspace              = true
 todo-core                    = { path = "../../todo-core" }
+tauri-plugin-autostart = "2.5.1"
 
 [lints]
 workspace = true

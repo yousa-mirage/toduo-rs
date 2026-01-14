@@ -4,7 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [v0.1.0] - 2025-01-13
+### TUI
+
+- feat: Use `[ ]` and `[✓]` for task completion status in TUI.
+
+### GUI
+
+- feat: Add the Auto-Launch function to GUI.
+- feat: Each time the GUI application is launched from the tray, the window is displayed in the center of the screen.
+
+## [v0.1.1] - 2026-01-13
+
+### Fixed
+
+- Fixed issue where GUI does not show date selector correctly.
+
+## [v0.1.0] - 2026-01-13
 
 ### Added
 

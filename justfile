@@ -1,4 +1,5 @@
 # 1. 变量定义：根据操作系统自动判断二进制后缀
+
 bin_ext := if os() == "windows" { ".exe" } else { "" }
 
 default:
@@ -51,8 +52,8 @@ check:
 show-paths:
     @echo ""
     @echo "📂 Output Locations:"
-    @echo "   👉 TUI: target/release/td{{bin_ext}}"
-    @echo "   👉 GUI: target/release/ToDuo{{bin_ext}}"
+    @echo "   👉 TUI: target/release/td{{ bin_ext }}"
+    @echo "   👉 GUI: target/release/ToDuo{{ bin_ext }}"
     @echo ""
 
 # 启动开发环境

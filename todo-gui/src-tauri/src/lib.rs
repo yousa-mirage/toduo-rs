@@ -283,6 +283,10 @@ pub fn run() {
     if let Err(e) = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--silent"]),
+        ))
         .setup(|app| {
             #[cfg(desktop)]
             {
@@ -300,6 +304,7 @@ pub fn run() {
 
                                 if !is_visible || is_minimized {
                                     let _ = window.unminimize();
+                                    let _ = window.center();
                                     let _ = window.show();
                                     let _ = window.set_focus();
                                 }
@@ -334,6 +339,7 @@ pub fn run() {
                     }
                     "show" => {
                         if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.center();
                             let _ = window.show();
                             let _ = window.set_focus();
                         }
@@ -348,12 +354,23 @@ pub fn run() {
                     {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.center();
                             let _ = window.show();
                             let _ = window.set_focus();
                         }
                     }
                 })
                 .build(app)?;
+
+            // Show window if not started silently
+            if let Some(window) = app.get_webview_window("main") {
+                let args: Vec<String> = std::env::args().collect();
+                if !args.contains(&"--silent".to_string()) {
+                    let _ = window.center();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
 
             Ok(())
         })

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { onMounted, ref } from "vue";
 import logoUrl from "../assets/logo.png";
 
 defineProps<{
@@ -13,6 +15,32 @@ const emit = defineEmits<{
   (e: "update:theme", value: "light" | "dark" | "system"): void;
   (e: "change-folder"): void;
 }>();
+
+const autoStart = ref(false);
+
+onMounted(async () => {
+  try {
+    autoStart.value = await isEnabled();
+  } catch (e) {
+    console.error("Failed to check autostart status:", e);
+  }
+});
+
+async function toggleAutoStart(e: Event) {
+  const checked = (e.target as HTMLInputElement).checked;
+  try {
+    if (checked) {
+      await enable();
+    } else {
+      await disable();
+    }
+    autoStart.value = await isEnabled();
+  } catch (error) {
+    console.error("Failed to toggle autostart:", error);
+    // Revert visual state if failed (though strictly we rely on isEnabled check)
+    autoStart.value = !checked;
+  }
+}
 
 function handleBackdropClick(e: MouseEvent) {
   if (e.target === e.currentTarget) {
@@ -89,6 +117,21 @@ function handleBackdropClick(e: MouseEvent) {
           <p class="setting-desc">
             When enabled, closing the window will hide it to the system tray
             instead of quitting.
+          </p>
+        </div>
+
+        <!-- Autostart Row -->
+        <div class="setting-row">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              :checked="autoStart"
+              @change="toggleAutoStart"
+            />
+            <span>Run on Startup</span>
+          </label>
+          <p class="setting-desc">
+            Automatically launch ToDuo when you log in.
           </p>
         </div>
       </div>
