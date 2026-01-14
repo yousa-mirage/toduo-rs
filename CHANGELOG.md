@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 - feat: Add the Auto-Launch function to GUI.
 - feat: Each time the GUI application is launched from the tray, the window is displayed in the center of the screen.
+- feat: Add settings at Right-click menu for GUI.
 
 ## [v0.1.1] - 2026-01-13
 

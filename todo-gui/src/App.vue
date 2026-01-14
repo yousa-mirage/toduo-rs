@@ -418,6 +418,12 @@ onMounted(() => {
   loadTasks();
   initSettings();
   window.addEventListener("keydown", handleGlobalKeydown);
+
+  // Listen for tray menu "Settings" event
+  const appWindow = getCurrentWindow();
+  appWindow.listen("open-settings", () => {
+    showSettingsModal.value = true;
+  });
 });
 
 onUnmounted(() => {

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
 
@@ -322,7 +322,8 @@ pub fn run() {
 
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "Show Tasks", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+            let settings_i = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &settings_i, &quit_i])?;
 
             let icon = if let Some(icon_ref) = app.default_window_icon() {
                 icon_ref.clone()
@@ -342,6 +343,14 @@ pub fn run() {
                             let _ = window.center();
                             let _ = window.show();
                             let _ = window.set_focus();
+                        }
+                    }
+                    "settings" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.center();
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                            let _ = window.emit("open-settings", ());
                         }
                     }
                     _ => {}
